@@ -22,18 +22,20 @@ interface Job {
 const TABS: { label: string; value: JobStatus | 'all' }[] = [
     { label: 'All', value: 'all' },
     { label: 'Open', value: 'open' },
-    { label: 'In Progress', value: 'in_progress' },
+    { label: 'In Progress', value: 'assigned' },
+    { label: 'Awaiting Approval', value: 'pending_completion' },
     { label: 'Completed', value: 'completed' },
     { label: 'Cancelled', value: 'cancelled' },
 ]
 
 export default function HelpedJobs() {
     const navigate = useNavigate()
-    const { user } = useAuth()
+    const { user, profile } = useAuth()
     const [jobs, setJobs] = useState<Job[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState<JobStatus | 'all'>('all')
+    useEffect(() => { if (profile?.role === 'helper') navigate('/marketplace') }, [profile])
 
     useEffect(() => {
         async function fetchJobs() {

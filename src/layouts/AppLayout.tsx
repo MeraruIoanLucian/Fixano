@@ -2,6 +2,8 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Logo from '../components/Logo'
 import GradientButton from '../components/GradientButton'
+import NotificationBell from '../components/NotificationBell'
+
 
 // Layout pt paginile autentificate fara sidebar (create job, my jobs, profile)
 export default function AppLayout() {
@@ -9,10 +11,13 @@ export default function AppLayout() {
     const location = useLocation()
     const isHelper = profile?.role === 'helper'
 
+
     // linkuri navbar - mai simplu decat dashboard
     const navLinks = [
-        { to: '/dashboard', label: 'Dashboard' },
-        { to: '/helped-jobs', label: 'My Jobs' },
+        ...(isHelper
+            ? [{ to: '/marketplace', label: 'Browse Jobs' }]
+            : [{ to: '/helped-jobs', label: 'My Jobs' }]
+        ),
         { to: '/chat', label: 'Chats' },
     ]
 
@@ -49,6 +54,10 @@ export default function AppLayout() {
                                 Create Job
                             </GradientButton>
                         )}
+
+                        {/* Notification bell */}
+                        <NotificationBell />
+
                         <Link
                             to="/profile"
                             className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center"

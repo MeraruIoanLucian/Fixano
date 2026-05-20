@@ -18,14 +18,38 @@ export default function RegisterPage() {
     const [role, setRole] = useState<UserRole>(preselected ? roleFromUrl : 'helped')
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
+    const [emailSent, setEmailSent] = useState(false)
 
     async function handleSubmit() {
         setError('')
         setLoading(true)
-        const { error } = await signUp(email, password, fullName, role)
+        const { error, needsConfirmation } = await signUp(email, password, fullName, role)
         setLoading(false)
         if (error) setError(error)
+        else if (needsConfirmation) setEmailSent(true)
         else navigate('/dashboard')
+    }
+
+    // dupa signup cu email confirmation — afisam mesajul
+    if (emailSent) {
+        return (
+            <AuthLayout title="Check your email">
+                <div className="text-center space-y-4">
+                    <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto" style={{ background: '#D1FAE5' }}>
+                        <span className="material-symbols-outlined text-3xl" style={{ color: '#065F46' }}>mark_email_read</span>
+                    </div>
+                    <p className="text-sm leading-relaxed" style={{ color: '#6b5e50' }}>
+                        We sent a confirmation link to <strong style={{ color: '#2c2419' }}>{email}</strong>. Please check your inbox and click the link to activate your account.
+                    </p>
+                    <p className="text-xs" style={{ color: '#A89882' }}>
+                        Didn't receive it? Check your spam folder or try again.
+                    </p>
+                    <GradientButton to="/login" variant="outline" size="sm" fullWidth>
+                        Go to Login
+                    </GradientButton>
+                </div>
+            </AuthLayout>
+        )
     }
 
     return (
@@ -99,3 +123,4 @@ export default function RegisterPage() {
         </AuthLayout>
     )
 }
+

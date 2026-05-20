@@ -16,6 +16,15 @@ export default function JobDetails() {
     const [submitting, setSubmitting] = useState(false)
     const [submitError, setSubmitError] = useState<string | null>(null)
     const [hasApplied, setHasApplied] = useState(false)
+
+    // review states
+    const [reviewRating, setReviewRating] = useState(0)
+    const [reviewHover, setReviewHover] = useState(0)
+    const [reviewComment, setReviewComment] = useState('')
+    const [reviewSubmitting, setReviewSubmitting] = useState(false)
+    const [existingReview, setExistingReview] = useState<any>(null)
+    const [previewImage, setPreviewImage] = useState<string | null>(null)
+
     const { user } = useAuth()
     const { id } = useParams()
     const navigate = useNavigate()
@@ -35,12 +44,18 @@ export default function JobDetails() {
                 const { data: myOffer } = await supabase.from('offers').select('*').eq('job_id', id).eq('helper_id', user.id).maybeSingle()
                 if (myOffer) setHasApplied(true)
             }
+
+            // verificam daca exista deja un review pt acest job
+            if (user) {
+                const { data: review } = await supabase.from('reviews').select('*').eq('job_id', id).eq('reviewer_id', user.id).maybeSingle()
+                if (review) setExistingReview(review)
+            }
+
             setLoading(false)
         }
         fetchJob()
     }, [])
 
-    // TODO: implementeaza handleSendOffer (still needs testing, chat not created)
     async function handleSendOffer(e: React.FormEvent) {
         e.preventDefault()
         setSubmitError(null)
@@ -62,7 +77,6 @@ export default function JobDetails() {
         }
     }
 
-    // TODO: implementeaza handleAcceptOffer (still needs testing)
     async function handleAcceptOffer(offer: any) {
         if (!job || !user) return
         setSubmitError(null)
@@ -98,6 +112,31 @@ export default function JobDetails() {
 
     }
 
+    async function handeDeclineOffer(offer: any) {
+        const { error: rejectOffer } = await supabase.from('offers').update({ status: 'rejected' }).eq('id', offer.id)
+        if (rejectOffer) throw rejectOffer
+
+        setOffers(offers.filter(o => o.id !== offer.id))
+    }
+
+    async function handleSubmitReview() {
+        if (!user || !job || reviewRating === 0) return
+        setReviewSubmitting(true)
+        // owner lasa review la helper, helper lasa review la owner
+        const reviewedId = isOwner ? job.helper_id : job.owner_id
+        const { data, error } = await supabase.from('reviews').insert({
+            job_id: job.id,
+            reviewer_id: user.id,
+            reviewed_id: reviewedId,
+            rating: reviewRating,
+            comment: reviewComment.trim() || null,
+        }).select().single()
+        if (!error && data) {
+            setExistingReview(data)
+        }
+        setReviewSubmitting(false)
+    }
+
     // Loading
     if (loading) {
         return (
@@ -118,6 +157,15 @@ export default function JobDetails() {
         )
     }
 
+    const handleDelete = async () => {
+        if (!window.confirm('Are you sure you want to delete this job?')) return;
+        await supabase
+            .from('jobs')
+            .delete()
+            .eq('id', job.id);
+        navigate('/helped-jobs');
+    }
+
     return (
         <div style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
             <main className="pt-12 pb-24 px-6 md:px-12 max-w-screen-2xl mx-auto">
@@ -131,19 +179,20 @@ export default function JobDetails() {
                             <GradientButton to="/helped-jobs" variant="outline" icon="arrow_back" size="sm">Back to Jobs</GradientButton>
                         </div>
 
-                        <div className="rounded-[2rem] p-8 md:p-12" style={{ background: '#FFFFFF', boxShadow: '0 24px 48px rgba(44, 36, 25, 0.04)' }}>
+                        <div className="rounded-[2rem] p-8 md:p-12 relative" style={{ background: '#FFFFFF', boxShadow: '0 24px 48px rgba(44, 36, 25, 0.04)' }}>
+                            {job.owner_id === user?.id && job.status === 'open' && (
+                                <button className='px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider cursor-pointer absolute' style={{ backgroundColor: '#FEE2E2', color: '#991B1B', top: '2rem', right: '2rem' }} onClick={handleDelete}>Delete job</button>
+                            )}
+                            {job.owner_id === user?.id && job.status === 'pending_completion' && (
+                                <button className='px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider cursor-pointer absolute' style={{ backgroundColor: '#FEE2E2', color: '#991B1B', top: '2rem', right: '2rem' }} onClick={handleDelete}>Delete job</button>
+                                //TODO: sa fac sa trebuiasca report
+                            )}
+
                             {/* Status + Urgency */}
                             <div className="flex items-center gap-3 mb-6 flex-wrap">
                                 <StatusBadge status={job.status} />
                                 <UrgencyBadge urgency={job.urgency} />
-                                {job.ai_generated && (
-                                    <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
-                                        style={{ background: '#E0E7FF', color: '#3730A3' }}>
-                                        AI Assisted
-                                    </span>
-                                )}
                             </div>
-
                             {/* Categorie + Titlu */}
                             <div className="flex items-start gap-5 mb-8">
 
@@ -160,6 +209,22 @@ export default function JobDetails() {
                                 <h3 className="text-sm font-bold uppercase tracking-widest mb-3" style={{ color: '#6b5e50' }}>Description</h3>
                                 <p className="leading-relaxed" style={{ color: '#2c2419' }}>{job.description}</p>
                             </div>
+
+                            {/* Galerie imagini daca exista */}
+                            {job.image_urls && job.image_urls.length > 0 && (
+                                <div className="mb-8">
+                                    <h3 className="text-sm font-bold uppercase tracking-widest mb-3" style={{ color: '#6b5e50' }}>Photos</h3>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                        {job.image_urls.map((url: string, i: number) => (
+                                            <div key={i}
+                                                className="aspect-square rounded-xl overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                                                onClick={() => setPreviewImage(url)}>
+                                                <img src={url} alt={`Job photo ${i + 1}`} className="w-full h-full object-cover" />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Info grid */}
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-6" style={{ borderTop: '1px solid #EFE9E3' }}>
@@ -247,8 +312,129 @@ export default function JobDetails() {
                             </div>
                         )}
 
+                        {!isOwner && job.status === 'assigned' && (
+                            <div className="rounded-[2rem] p-8 relative overflow-hidden" style={{ background: '#4a3f35' }}>
+                                <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full blur-3xl" style={{ background: 'rgba(200, 180, 155, 0.15)' }} />
+                                <div className="relative z-10">
+
+                                    <h3 className="text-xl font-bold mb-3" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#FFFFFF' }}>Everything alright?</h3>
+                                    <p className="leading-relaxed mb-8" style={{ color: '#D9CFC7' }}>Mark the job as done or tell us if you have any issues</p>
+                                    <div className='flex gap-4'>
+                                        <GradientButton onClick={async () => {
+                                            await supabase.from('jobs').update({ status: 'pending_completion' }).eq('id', job.id)
+                                            setJob({ ...job, status: 'pending_completion' })
+                                        }} variant="secondary" icon="check_circle" size="sm">Mark as Done</GradientButton>
+                                        <GradientButton variant="outline" icon="flag" size="sm">Report Issue</GradientButton>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {!isOwner && job.status === 'pending_completion' && (
+                            <div className="rounded-[2rem] p-8 relative overflow-hidden" style={{ background: '#1E40AF' }}>
+                                <div className="relative z-10">
+                                    <div className="mb-6 flex items-center gap-3">
+                                        <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#93C5FD' }} />
+                                        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#93C5FD' }}>Pending</span>
+                                    </div>
+                                    <h3 className="text-xl font-bold mb-3" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#FFFFFF' }}>Waiting for approval</h3>
+                                    <p className="leading-relaxed" style={{ color: '#BFDBFE' }}>You marked this job as done. The homeowner has 2 days to confirm or it will be automatically approved.</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {isOwner && job.status === 'pending_completion' && (
+                            <div className="rounded-[2rem] p-8 relative overflow-hidden" style={{ background: '#065F46' }}>
+                                <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full blur-3xl" style={{ background: 'rgba(209, 250, 229, 0.15)' }} />
+                                <div className="relative z-10">
+                                    <div className="mb-6 flex items-center gap-3">
+                                        <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#6EE7B7' }} />
+                                        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#6EE7B7' }}>Action Required</span>
+                                    </div>
+                                    <h3 className="text-xl font-bold mb-3" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#FFFFFF' }}>Job marked as done</h3>
+                                    <p className="leading-relaxed mb-8" style={{ color: '#A7F3D0' }}>The technician finished the work. Please confirm or report any issues.</p>
+                                    <div className='flex gap-4'>
+                                        <GradientButton onClick={async () => {
+                                            await supabase.from('jobs').update({ status: 'completed' }).eq('id', job.id)
+                                            setJob({ ...job, status: 'completed' })
+                                        }} variant="secondary" icon="verified" size="sm">Confirm Completion</GradientButton>
+                                        <GradientButton variant="outline" icon="flag" size="sm">Report Issue</GradientButton>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Review section — apare dupa ce jobul e completed */}
+                        {job.status === 'completed' && (
+                            <div className="rounded-[2rem] p-8 relative overflow-hidden" style={{ background: '#FFFFFF', boxShadow: '0 24px 48px rgba(44, 36, 25, 0.04)' }}>
+                                <div className="flex items-center gap-3 mb-6">
+                                    <div className="p-2 rounded-xl" style={{ background: '#FEF3C7' }}>
+                                        <span className="material-symbols-outlined" style={{ color: '#F59E0B', fontVariationSettings: "'FILL' 1" }}>star</span>
+                                    </div>
+                                    <h2 className="text-xl font-bold" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#2c2419' }}>
+                                        {existingReview ? 'Your Review' : 'Leave a Review'}
+                                    </h2>
+                                </div>
+
+                                {existingReview ? (
+                                    // review-ul exista deja — afisam read-only
+                                    <div>
+                                        <div className="flex items-center gap-1 mb-3">
+                                            {[1, 2, 3, 4, 5].map(star => (
+                                                <span key={star} className="material-symbols-outlined text-2xl"
+                                                    style={{ color: star <= existingReview.rating ? '#F59E0B' : '#D9CFC7', fontVariationSettings: "'FILL' 1" }}>star</span>
+                                            ))}
+                                            <span className="text-sm font-bold ml-2" style={{ color: '#2c2419' }}>{existingReview.rating}/5</span>
+                                        </div>
+                                        {existingReview.comment && (
+                                            <p className="text-sm leading-relaxed" style={{ color: '#6b5e50' }}>{existingReview.comment}</p>
+                                        )}
+                                        <p className="text-xs mt-3" style={{ color: '#A89882' }}>Submitted {new Date(existingReview.created_at).toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                                    </div>
+                                ) : (
+                                    // formular review
+                                    <div className="space-y-4">
+                                        <p className="text-sm" style={{ color: '#6b5e50' }}>How was your experience with the technician?</p>
+
+                                        {/* Stele clickabile */}
+                                        <div className="flex items-center gap-1">
+                                            {[1, 2, 3, 4, 5].map(star => (
+                                                <button key={star} type="button"
+                                                    className="cursor-pointer transition-transform hover:scale-110"
+                                                    onMouseEnter={() => setReviewHover(star)}
+                                                    onMouseLeave={() => setReviewHover(0)}
+                                                    onClick={() => setReviewRating(star)}>
+                                                    <span className="material-symbols-outlined text-3xl"
+                                                        style={{ color: star <= (reviewHover || reviewRating) ? '#F59E0B' : '#D9CFC7', fontVariationSettings: "'FILL' 1" }}>star</span>
+                                                </button>
+                                            ))}
+                                            {reviewRating > 0 && (
+                                                <span className="text-sm font-bold ml-2" style={{ color: '#2c2419' }}>{reviewRating}/5</span>
+                                            )}
+                                        </div>
+
+                                        <textarea
+                                            value={reviewComment}
+                                            onChange={e => setReviewComment(e.target.value)}
+                                            placeholder="Tell us about your experience (optional)..."
+                                            rows={3}
+                                            className="w-full px-4 py-3 rounded-xl outline-none text-sm resize-none"
+                                            style={{ background: '#F9F8F6', border: '1px solid #D9CFC7', color: '#2c2419' }}
+                                        />
+
+                                        <GradientButton onClick={handleSubmitReview}
+                                            loading={reviewSubmitting}
+                                            disabled={reviewSubmitting || reviewRating === 0}
+                                            icon="send" size="sm">
+                                            Submit Review
+                                        </GradientButton>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {/* Lista oferte doar pt owner */}
-                        {isOwner && (
+                        {isOwner && job.status !== 'completed' && job.status !== 'cancelled' && (
                             <div className="rounded-[2rem] p-8" style={{ background: '#FFFFFF', boxShadow: '0 24px 48px rgba(44, 36, 25, 0.04)' }}>
                                 <div className="flex items-center gap-3 mb-8">
                                     <div className="p-2 rounded-xl" style={{ background: '#C9B59C20' }}>
@@ -308,8 +494,10 @@ export default function JobDetails() {
                                                             style={{ background: '#2c2419', color: '#F9F8F6' }}>
                                                             <span className="material-symbols-outlined text-sm">check</span>Accept
                                                         </button>
-                                                        {/* //TODO : implementeaza decline offer  */}
-                                                        <button className="px-5 py-3 rounded-xl font-bold text-sm transition-all duration-200"
+                                                        {/* //TODO : testeaza decline*/}
+                                                        <button
+                                                            onClick={() => handeDeclineOffer(offer)}
+                                                            className="px-5 py-3 rounded-xl font-bold text-sm transition-all duration-200"
                                                             style={{ border: '1px solid #D9CFC7', color: '#6b5e50' }}>
                                                             Decline
                                                         </button>
@@ -332,6 +520,19 @@ export default function JobDetails() {
                     </aside>
                 </div>
             </main>
+
+            {/* Fullscreen image preview */}
+            {previewImage && (
+                <div className="fixed inset-0 z-[999] bg-black/80 flex items-center justify-center p-4"
+                    onClick={() => setPreviewImage(null)}>
+                    <button className="absolute top-6 right-6 text-white cursor-pointer"
+                        onClick={() => setPreviewImage(null)}>
+                        <span className="material-symbols-outlined text-3xl">close</span>
+                    </button>
+                    <img src={previewImage} alt="Preview" className="max-w-full max-h-full rounded-2xl object-contain"
+                        onClick={e => e.stopPropagation()} />
+                </div>
+            )}
         </div>
     )
 }

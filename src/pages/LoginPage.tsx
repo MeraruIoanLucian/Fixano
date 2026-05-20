@@ -50,6 +50,11 @@ export default function LoginPage() {
                     className="w-full px-4 py-3 rounded-xl outline-none transition-all text-sm"
                     style={{ background: '#F9F8F6', border: '1px solid #D9CFC7', color: '#2c2419' }}
                 />
+                <div className="text-right mt-1.5">
+                    <Link to="/forgot-password" className="text-xs font-medium transition-colors duration-200" style={{ color: '#6b5e50' }}>
+                        Forgot password?
+                    </Link>
+                </div>
             </div>
 
             <GradientButton

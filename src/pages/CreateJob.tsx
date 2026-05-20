@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -40,7 +40,33 @@ export default function CreateJobPage() {
     const [submitting, setSubmitting] = useState(false)
     const [submitError, setSubmitError] = useState<string | null>(null)
 
+    // image upload
+    const [images, setImages] = useState<File[]>([])
+    const [imagePreviews, setImagePreviews] = useState<string[]>([])
+    const imageInputRef = useRef<HTMLInputElement>(null)
+
     useEffect(() => { if (profile?.role === 'helper') navigate('/dashboard') }, [profile])
+
+    function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+        const files = Array.from(e.target.files || [])
+        const remaining = 3 - images.length
+        const newFiles = files.slice(0, remaining)
+        if (newFiles.length === 0) return
+
+        setImages(prev => [...prev, ...newFiles])
+        // generam preview-uri
+        newFiles.forEach(file => {
+            const reader = new FileReader()
+            reader.onloadend = () => setImagePreviews(prev => [...prev, reader.result as string])
+            reader.readAsDataURL(file)
+        })
+        if (imageInputRef.current) imageInputRef.current.value = ''
+    }
+
+    function removeImage(index: number) {
+        setImages(prev => prev.filter((_, i) => i !== index))
+        setImagePreviews(prev => prev.filter((_, i) => i !== index))
+    }
 
     async function handleAiAnalyze() {
         if (!aiDescription.trim() || aiDescription.trim().length < 5) {
@@ -75,9 +101,21 @@ export default function CreateJobPage() {
         if (!user) { setSubmitError('You must be logged in.'); return }
         setSubmitting(true)
         try {
+            // upload imagini daca exista
+            const imageUrls: string[] = []
+            for (const file of images) {
+                const fileExt = file.name.split('.').pop()
+                const filePath = `${user.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`
+                const { error: uploadError } = await supabase.storage.from('job-images').upload(filePath, file)
+                if (uploadError) throw new Error('Failed to upload image: ' + uploadError.message)
+                const { data: { publicUrl } } = supabase.storage.from('job-images').getPublicUrl(filePath)
+                imageUrls.push(publicUrl)
+            }
+
             const { error } = await supabase.from('jobs').insert({
                 owner_id: user.id, title: title.trim(), description: description.trim(),
                 category, urgency, budget: price.trim() || null,
+                image_urls: imageUrls.length > 0 ? imageUrls : undefined,
             })
             if (error) throw new Error(error.message)
             navigate('/dashboard')
@@ -184,6 +222,37 @@ export default function CreateJobPage() {
                                             </button>
                                         ))}
                                     </div>
+                                </div>
+
+                                {/* Image Upload */}
+                                <div>
+                                    <label className="block font-bold text-lg tracking-tight mb-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#2c2419' }}>Photos (Optional)</label>
+                                    <p className="text-sm mb-4" style={{ color: '#6b5e50' }}>Add up to 3 photos to help technicians understand the problem.</p>
+
+                                    {imagePreviews.length > 0 && (
+                                        <div className="flex gap-3 mb-4 flex-wrap">
+                                            {imagePreviews.map((preview, i) => (
+                                                <div key={i} className="relative w-24 h-24 rounded-xl overflow-hidden group">
+                                                    <img src={preview} alt={`Preview ${i + 1}`} className="w-full h-full object-cover" />
+                                                    <button type="button" onClick={() => removeImage(i)}
+                                                        className="absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                                        style={{ background: 'rgba(0,0,0,0.6)' }}>
+                                                        <span className="material-symbols-outlined text-white text-xs">close</span>
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {images.length < 3 && (
+                                        <button type="button" onClick={() => imageInputRef.current?.click()}
+                                            className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer"
+                                            style={{ background: '#F9F8F6', color: '#6b5e50', border: '1px dashed #D9CFC7' }}>
+                                            <span className="material-symbols-outlined text-sm">add_photo_alternate</span>
+                                            Add Photo ({images.length}/3)
+                                        </button>
+                                    )}
+                                    <input ref={imageInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageSelect} />
                                 </div>
 
                                 {/* Budget & Submit */}

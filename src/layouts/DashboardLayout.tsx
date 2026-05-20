@@ -2,6 +2,8 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Logo from '../components/Logo'
 import GradientButton from '../components/GradientButton'
+import NotificationBell from '../components/NotificationBell'
+
 
 // Layout comun pt paginile cu sidebar (dashboard, etc.)
 export default function DashboardLayout() {
@@ -9,14 +11,17 @@ export default function DashboardLayout() {
     const location = useLocation()
     const isHelper = profile?.role === 'helper'
 
+
     // linkurile din sidebar - difera in functie de rol
     const sidebarLinks = [
-        { to: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
         ...(isHelper
-            ? [{ to: '/helped-jobs', icon: 'work', label: 'Marketplace' }]
+            ? []
             : [{ to: '/create-job', icon: 'add_circle', label: 'Create Job' }]
         ),
-        { to: '/helped-jobs', icon: 'pending_actions', label: 'My Jobs' },
+        ...(isHelper
+            ? [{ to: '/marketplace', icon: 'work', label: 'Browse jobs' }]
+            : [{ to: '/helped-jobs', icon: 'pending_actions', label: 'My Jobs' }]
+        ),
         { to: '/chat', icon: 'chat', label: 'Messages' },
         { to: '/profile', icon: 'settings', label: 'Settings' },
     ]
@@ -63,6 +68,9 @@ export default function DashboardLayout() {
                                 Create Job
                             </GradientButton>
                         )}
+
+                        {/* Notification bell */}
+                        <NotificationBell />
                         <Link to="/profile" className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center"
                             style={{ background: profile?.avatar_url ? 'transparent' : '#EFE9E3', border: '2px solid #D9CFC7' }}>
                             {profile?.avatar_url ? (
@@ -79,11 +87,14 @@ export default function DashboardLayout() {
             <aside className="hidden md:flex flex-col fixed left-0 top-20 h-[calc(100vh-5rem)] w-64 z-40 p-4 overflow-y-auto"
                 style={{ background: '#F3F1EE', borderRight: '1px solid #E8E2DA' }}>
                 <div className="flex items-center gap-3 px-4 py-6 mb-4">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#C9B59C30' }}>
-                        <span className="material-symbols-outlined" style={{ color: '#C9B59C', fontVariationSettings: "'FILL' 1" }}>
-                            {isHelper ? 'engineering' : 'person'}
-                        </span>
-                    </div>
+                    <Link to="/profile" className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center"
+                        style={{ background: profile?.avatar_url ? 'transparent' : '#EFE9E3', border: '2px solid #D9CFC7' }}>
+                        {profile?.avatar_url ? (
+                            <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                        ) : (
+                            <span className="material-symbols-outlined text-lg" style={{ color: '#6b5e50' }}>person</span>
+                        )}
+                    </Link>
                     <div>
                         <div className="font-semibold text-sm" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#2c2419' }}>
                             {profile?.full_name ?? 'User'}
@@ -150,19 +161,29 @@ export default function DashboardLayout() {
                             </p>
                         </div>
                         {[
-                            { title: 'Directory', links: ['About Us', 'Service Directory', 'Technician Portal'] },
-                            { title: 'Support', links: ['Help Center', 'Privacy Policy', 'Terms of Service'] },
+                            {
+                                title: 'Directory', links: [
+                                    { label: 'About Us', to: '/page/about' },
+                                    { label: 'Help Center', to: '/page/help' },
+                                ]
+                            },
+                            {
+                                title: 'Support', links: [
+                                    { label: 'Privacy Policy', to: '/page/privacy' },
+                                    { label: 'Terms of Service', to: '/page/terms' },
+                                ]
+                            },
                         ].map((col, i) => (
                             <div key={i}>
                                 <h5 className="font-bold mb-6 text-sm" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#2c2419' }}>{col.title}</h5>
                                 <ul className="space-y-3">
                                     {col.links.map((link) => (
-                                        <li key={link}>
-                                            <a href="#" className="text-sm transition-colors duration-200" style={{ color: '#6b5e50' }}
+                                        <li key={link.label}>
+                                            <Link to={link.to} className="text-sm transition-colors duration-200" style={{ color: '#6b5e50' }}
                                                 onMouseEnter={e => (e.target as HTMLElement).style.color = '#2c2419'}
                                                 onMouseLeave={e => (e.target as HTMLElement).style.color = '#6b5e50'}>
-                                                {link}
-                                            </a>
+                                                {link.label}
+                                            </Link>
                                         </li>
                                     ))}
                                 </ul>

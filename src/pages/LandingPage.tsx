@@ -320,20 +320,32 @@ export default function LandingPage() {
                             <p className="text-xs italic" style={{ color: '#C9B59C80' }}>© 2026 HomeHelp. All rights reserved.</p>
                         </div>
                         {[
-                            { title: 'Platform', links: ['Find Pros', 'Technician Portal', 'How It Works', 'Pricing'] },
-                            { title: 'Legal', links: ['Terms of Service', 'Privacy Policy', 'Cookie Policy'] },
-                            { title: 'Support', links: ['Help Center', 'Contact Support', 'Community'] },
+                            { title: 'Platform', links: [
+                                { label: 'Find Pros', to: '/register?role=helped' },
+                                { label: 'Technician Portal', to: '/register?role=helper' },
+                                { label: 'How It Works', to: '/' },
+                            ]},
+                            { title: 'Legal', links: [
+                                { label: 'Terms of Service', to: '/page/terms' },
+                                { label: 'Privacy Policy', to: '/page/privacy' },
+                                { label: 'Cookie Policy', to: '/page/cookies' },
+                            ]},
+                            { title: 'Support', links: [
+                                { label: 'Help Center', to: '/page/help' },
+                                { label: 'Contact Support', to: '/page/contact' },
+                                { label: 'About Us', to: '/page/about' },
+                            ]},
                         ].map((col, i) => (
                             <div key={i}>
                                 <h4 className="font-bold mb-6 text-xs uppercase tracking-widest" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#C9B59C' }}>{col.title}</h4>
                                 <ul className="space-y-3 text-sm">
                                     {col.links.map((link) => (
-                                        <li key={link}>
-                                            <a href="/" className="transition-colors duration-200" style={{ color: '#D9CFC7' }}
+                                        <li key={link.label}>
+                                            <Link to={link.to} className="transition-colors duration-200" style={{ color: '#D9CFC7' }}
                                                 onMouseEnter={e => (e.target as HTMLElement).style.color = '#F9F8F6'}
                                                 onMouseLeave={e => (e.target as HTMLElement).style.color = '#D9CFC7'}>
-                                                {link}
-                                            </a>
+                                                {link.label}
+                                            </Link>
                                         </li>
                                     ))}
                                 </ul>

@@ -21,7 +21,7 @@ interface AuthState {
     session: Session | null
     profile: Profile | null
     loading: boolean
-    signUp: (email: string, password: string, fullName: string, role: UserRole) => Promise<{ error: string | null }>
+    signUp: (email: string, password: string, fullName: string, role: UserRole) => Promise<{ error: string | null; needsConfirmation?: boolean }>
     signIn: (email: string, password: string) => Promise<{ error: string | null }>
     signOut: () => Promise<void>
     refreshProfile: () => Promise<void>
@@ -63,21 +63,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, [])
 
     async function signUp(email: string, password: string, fullName: string, role: UserRole) {
-        const { data, error } = await supabase.auth.signUp({ email, password })
+        // trimitem role si full_name ca metadata — trigger-ul din DB creaza profilul automat
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+                data: { full_name: fullName, role }
+            }
+        })
         if (error) return { error: error.message }
 
-        if (data.user) {
-            const { error: profileError } = await supabase.from('profiles').insert({
-                id: data.user.id,
-                role,
-                full_name: fullName,
-                phone: '',
-                city: '',
-            })
-            if (profileError) return { error: profileError.message }
-            await fetchProfile(data.user.id)
+        // daca nu avem sesiune inseamna ca trebuie confirmat emailul
+        if (data.user && !data.session) {
+            return { error: null, needsConfirmation: true }
         }
 
+        // daca avem sesiune (autoconfirm on) → fetch profile
+        if (data.user) await fetchProfile(data.user.id)
         return { error: null }
     }
 

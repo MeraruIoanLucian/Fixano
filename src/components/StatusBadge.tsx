@@ -1,4 +1,4 @@
-type JobStatus = 'open' | 'assigned' | 'in_progress' | 'completed' | 'cancelled'
+type JobStatus = 'open' | 'assigned' | 'in_progress' | 'pending_completion' | 'completed' | 'cancelled'
 type Urgency = 'low' | 'medium' | 'urgent'
 
 const STATUS_MAP: Record<JobStatus, { bg: string; color: string; label: string }> = {
@@ -6,6 +6,7 @@ const STATUS_MAP: Record<JobStatus, { bg: string; color: string; label: string }
     assigned: { bg: '#E0E7FF', color: '#3730A3', label: 'Assigned' },
     in_progress: { bg: '#FEF3C7', color: '#92400E', label: 'In Progress' },
     completed: { bg: '#D1FAE5', color: '#065F46', label: 'Completed' },
+    pending_completion: { bg: '#DBEAFE', color: '#1E40AF', label: 'Pending Approval' },
     cancelled: { bg: '#F3F4F6', color: '#6B7280', label: 'Cancelled' },
 }
 
