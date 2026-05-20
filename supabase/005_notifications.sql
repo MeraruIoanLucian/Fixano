@@ -1,4 +1,3 @@
--- 005_notifications.sql
 -- Tabel pentru notificari in-app
 
 create table public.notifications (

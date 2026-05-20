@@ -1,5 +1,4 @@
--- HomeHelp: Jobs table + RLS
--- Run this in Supabase SQL Editor (Dashboard → SQL Editor → New Query)
+ Jobs table + RLS
 
 -- 1. Create jobs table
 create table public.jobs (

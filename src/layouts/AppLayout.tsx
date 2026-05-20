@@ -82,7 +82,7 @@ export default function AppLayout() {
             <footer className="pt-16 pb-8 px-6 md:px-12" style={{ background: 'var(--brand-dark)' }}>
                 <div className="max-w-screen-2xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
                     <Logo light size="sm" to="/" />
-                    <p className="text-xs" style={{ color: '#C9B59C80' }}>© 2026 HomeHelp. All rights reserved.</p>
+                    <p className="text-xs" style={{ color: '#C9B59C80' }}>© 2026 Fixano. All rights reserved.</p>
                 </div>
             </footer>
         </div>

@@ -1,5 +1,4 @@
--- HomeHelp: Profiles table + RLS
--- Run this in Supabase SQL Editor (Dashboard → SQL Editor → New Query)
+-- Profiles table + RLS
 
 -- 1. Create profiles table
 create table public.profiles (

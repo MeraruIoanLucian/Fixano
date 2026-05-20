@@ -1,6 +1,3 @@
--- HomeHelp: Delete Account function
--- Run this in Supabase SQL Editor (Dashboard → SQL Editor → New Query)
-
 -- Functie SECURITY DEFINER care sterge userul din auth.users
 -- Profilele, joburile, mesajele etc. se sterg automat prin ON DELETE CASCADE
 create or replace function public.delete_own_account()

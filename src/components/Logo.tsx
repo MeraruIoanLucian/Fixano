@@ -21,7 +21,7 @@ export default function Logo({ size = 'md', light = false, to = '/' }: LogoProps
                 color: light ? 'var(--brand-bg)' : 'var(--brand-dark)',
             }}
         >
-            Home<span style={{ color: 'var(--brand-accent)' }}>Help</span>
+            Fix<span style={{ color: 'var(--brand-accent)' }}>ano</span>
         </Link>
     )
 }

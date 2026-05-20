@@ -190,7 +190,7 @@ export default function DashboardLayout() {
                             </div>
                         ))}
                         <div className="col-span-2 md:col-span-4 mt-8 pt-8 text-center" style={{ borderTop: '1px solid #E8E2DA50' }}>
-                            <p className="text-xs" style={{ color: '#6b5e5080' }}>© 2026 HomeHelp. All rights reserved.</p>
+                            <p className="text-xs" style={{ color: '#6b5e5080' }}>© 2026 Fixano. All rights reserved.</p>
                         </div>
                     </div>
                 </footer>

@@ -211,7 +211,7 @@ export default function LandingPage() {
                 <div className="max-w-6xl mx-auto px-6 md:px-12">
                     <FadeSection>
                         <div className="text-center mb-16">
-                            <SectionHeading title="Two Sides, One Platform" subtitle="Whether you need help or you provide it — HomeHelp brings everyone together." centered size="sm" />
+                            <SectionHeading title="Two Sides, One Platform" subtitle="Whether you need help or you provide it — Fixano brings everyone together." centered size="sm" />
                         </div>
                     </FadeSection>
 
@@ -259,12 +259,12 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* Why HomeHelp - sectiune dark */}
+            {/* Why Fixano - sectiune dark */}
             <section id="why-us" className="py-24 mx-4 md:mx-8 rounded-[3rem] my-24" style={{ background: 'linear-gradient(135deg, #2c2419 0%, #4a3f35 100%)' }}>
                 <div className="max-w-7xl mx-auto px-8 md:px-12">
                     <FadeSection>
                         <div className="text-center mb-16">
-                            <SectionHeading title="Why HomeHelp?" subtitle="Built for trust, speed, and craftsmanship." light centered />
+                            <SectionHeading title="Why Fixano?" subtitle="Built for trust, speed, and craftsmanship." light centered />
                         </div>
                     </FadeSection>
 
@@ -317,7 +317,7 @@ export default function LandingPage() {
                             <p className="text-sm leading-relaxed max-w-xs mb-6" style={{ color: '#D9CFC7' }}>
                                 Connecting homeowners with artisanal excellence. Professional, verified, and trusted home services.
                             </p>
-                            <p className="text-xs italic" style={{ color: '#C9B59C80' }}>© 2026 HomeHelp. All rights reserved.</p>
+                            <p className="text-xs italic" style={{ color: '#C9B59C80' }}>© 2026 Fixano. All rights reserved.</p>
                         </div>
                         {[
                             { title: 'Platform', links: [

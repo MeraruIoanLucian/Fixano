@@ -18,7 +18,7 @@ const VALID_CATEGORIES = [
 
 const VALID_URGENCIES = ["low", "medium", "urgent"];
 
-const SYSTEM_PROMPT = `Ești un asistent pentru platforma HomeHelp. Primești descrierea unei probleme casnice și trebuie să o clasifici.
+const SYSTEM_PROMPT = `Ești un asistent pentru platforma Fixano. Primești descrierea unei probleme casnice și trebuie să o clasifici.
 
 Returnează STRICT un JSON valid (fără markdown, fără backticks, fără text suplimentar) cu exact aceste 3 câmpuri:
 - "category": una din aceste valori EXACTE: "Instalații Apă", "Gaze", "Electrice", "Centrale Termice", "Climatizare", "Altele"

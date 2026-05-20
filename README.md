@@ -1,4 +1,4 @@
-# 🛠️ HomeHelp
+# 🔧 Fixano
 
 A marketplace web app connecting **homeowners** with **local technicians** for home repair services (plumbing, heating, electrical, etc.). Built as a bachelor's thesis project.
 
