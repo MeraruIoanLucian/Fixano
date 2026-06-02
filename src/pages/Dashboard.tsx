@@ -34,10 +34,13 @@ export default function Dashboard() {
         // fetch accepted jobs for helper
         async function fetchAcceptedJobs() {
             setLoadingJobs(true)
+            // nu arata joburi completed mai vechi de 24h
+            const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
             const { data } = await supabase
                 .from('jobs')
                 .select('id, title, category, status, urgency, created_at')
                 .eq('helper_id', profile!.id)
+                .or(`status.neq.completed,and(status.eq.completed,updated_at.gte.${yesterday})`)
                 .order('created_at', { ascending: false })
                 .limit(3)
             setAcceptedJobs(data ?? [])
@@ -51,10 +54,13 @@ export default function Dashboard() {
         if (!profile) return
         async function fetchRecent() {
             setLoadingJobs(true)
+            // nu arata joburi completed mai vechi de 24h
+            const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
             const { data } = await supabase
                 .from('jobs')
                 .select('id, title, category, status, urgency, created_at')
                 .eq('owner_id', profile!.id)
+                .or(`status.neq.completed,and(status.eq.completed,updated_at.gte.${yesterday})`)
                 .order('created_at', { ascending: false })
                 .limit(3)
             setRecentJobs(data ?? [])

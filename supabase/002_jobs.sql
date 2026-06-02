@@ -14,7 +14,6 @@ create table public.jobs (
   budget text,                              -- free-text like "200-400 RON"
   status text not null default 'open' check (status in ('open', 'assigned', 'in_progress', 'completed', 'cancelled')),
   helper_id uuid references public.profiles(id),
-  ai_generated boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

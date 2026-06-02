@@ -69,6 +69,22 @@ export default function JobDetails() {
             })
             if (error) throw error
             const conversation = await getOrCreateConversation(id!, job.owner_id, user?.id!)
+
+            // creez si un chat_offer + mesaj ca oferta sa apara in chat
+            const { data: chatOffer } = await supabase.from('chat_offers').insert({
+                conversation_id: conversation.id,
+                sender_id: user?.id,
+                amount: parseFloat(price),
+            }).select('*').single()
+            if (chatOffer) {
+                await supabase.from('messages').insert({
+                    conversation_id: conversation.id,
+                    sender_id: user?.id,
+                    body: chatOffer.id,
+                    type: 'offer'
+                })
+            }
+
             navigate('/chat/' + conversation.id)
         } catch (error: any) {
             setSubmitError(error.message)
@@ -77,47 +93,6 @@ export default function JobDetails() {
         }
     }
 
-    async function handleAcceptOffer(offer: any) {
-        if (!job || !user) return
-        setSubmitError(null)
-        setSubmitting(true)
-        try {
-            // 1. UPDATE oferta: status = 'accepted'
-            const { error: offerError } = await supabase.from('offers').update({ status: 'accepted' }).eq('id', offer.id)
-            if (offerError) throw offerError
-            // 2. UPDATE restul ofertelor pe job: status = 'rejected'
-            const { error: rejectedOffersError } = await supabase.from('offers').update({ status: 'rejected' }).eq('job_id', job.id).neq('id', offer.id)
-            if (rejectedOffersError) throw rejectedOffersError
-            // 3. UPDATE jobul: status = 'assigned', helper_id = offer.helper_id
-            const { error: jobError } = await supabase.from('jobs').update({
-                status: 'assigned',
-                helper_id: offer.helper_id,
-                updated_at: new Date().toISOString()
-            }).eq('id', job.id)
-            if (jobError) throw jobError
-            // 4. refresh local state
-            setJob({
-                ...job,
-                status: 'assigned',
-                helper_id: offer.helper_id
-            })
-            setOffers(offers.map(o =>
-                o.id === offer.id ? { ...o, status: 'accepted' } : { ...o, status: 'rejected' }
-            ))
-        } catch (error: any) {
-            setSubmitError(error.message)
-        } finally {
-            setSubmitting(false)
-        }
-
-    }
-
-    async function handeDeclineOffer(offer: any) {
-        const { error: rejectOffer } = await supabase.from('offers').update({ status: 'rejected' }).eq('id', offer.id)
-        if (rejectOffer) throw rejectOffer
-
-        setOffers(offers.filter(o => o.id !== offer.id))
-    }
 
     async function handleSubmitReview() {
         if (!user || !job || reviewRating === 0) return
@@ -488,24 +463,29 @@ export default function JobDetails() {
 
                                                 {/* Actiuni */}
                                                 {offer.status === 'pending' && job.status === 'open' && (
-                                                    <div className="flex gap-3">
-                                                        <button onClick={() => handleAcceptOffer(offer)}
-                                                            className="flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.98]"
-                                                            style={{ background: '#2c2419', color: '#F9F8F6' }}>
-                                                            <span className="material-symbols-outlined text-sm">check</span>Accept
-                                                        </button>
-                                                        {/* //TODO : testeaza decline*/}
-                                                        <button
-                                                            onClick={() => handeDeclineOffer(offer)}
-                                                            className="px-5 py-3 rounded-xl font-bold text-sm transition-all duration-200"
-                                                            style={{ border: '1px solid #D9CFC7', color: '#6b5e50' }}>
-                                                            Decline
-                                                        </button>
-                                                    </div>
+                                                    <button onClick={async () => {
+                                                        // du ownerul in chat ca sa negocieze acolo
+                                                        const conv = await getOrCreateConversation(job.id, job.owner_id, offer.helper_id)
+                                                        navigate('/chat/' + conv.id)
+                                                    }}
+                                                        className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.98] cursor-pointer"
+                                                        style={{ background: '#2c2419', color: '#F9F8F6' }}>
+                                                        <span className="material-symbols-outlined text-sm">chat</span>Go to Chat
+                                                    </button>
                                                 )}
                                                 {offer.status === 'accepted' && (
-                                                    <span className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider"
-                                                        style={{ background: '#D1FAE5', color: '#065F46' }}>Accepted</span>
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider"
+                                                            style={{ background: '#D1FAE5', color: '#065F46' }}>Accepted</span>
+                                                        <button onClick={async () => {
+                                                            const conv = await getOrCreateConversation(job.id, job.owner_id, offer.helper_id)
+                                                            navigate('/chat/' + conv.id)
+                                                        }}
+                                                            className="px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-all duration-200 active:scale-[0.97]"
+                                                            style={{ background: '#2c2419', color: '#F9F8F6' }}>
+                                                            <span className="material-symbols-outlined text-xs">chat</span>Go to Chat
+                                                        </button>
+                                                    </div>
                                                 )}
                                                 {offer.status === 'rejected' && (
                                                     <span className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider"

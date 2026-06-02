@@ -6,6 +6,7 @@ import wipImg from '../assets/WorkInProgress.png'
 import Logo from '../components/Logo'
 import GradientButton from '../components/GradientButton'
 import SectionHeading from '../components/SectionHeading'
+import { CATEGORIES } from '../lib/constants'
 
 // Hook pt fade-in la scroll
 function useFadeIn() {
@@ -44,15 +45,6 @@ const pillars = [
     { icon: 'payments', title: 'Transparent Pricing', description: 'No hidden fees or surprise charges. See upfront estimates and pay securely through the platform.' },
     { icon: 'auto_awesome', title: 'AI-Powered Matching', description: 'Describe your problem in plain language. Our AI analyzes it to find the right category, urgency, and expert.' },
 ]
-
-const CATEGORIES = [
-    { value: 'Instalații Apă', icon: 'plumbing', label: 'Plumbing', sub: 'Systems & Fixtures' },
-    { value: 'Electrice', icon: 'bolt', label: 'Electrical', sub: 'Power & Safety' },
-    { value: 'Gaze', icon: 'gas_meter', label: 'Gas', sub: 'Installation & Repair' },
-    { value: 'Centrale Termice', icon: 'device_thermostat', label: 'Heating', sub: 'Climate Control' },
-    { value: 'Climatizare', icon: 'ac_unit', label: 'HVAC', sub: 'Air Conditioning' },
-    { value: 'Altele', icon: 'handyman', label: 'Other', sub: 'General Repairs' },
-] as const
 
 export default function LandingPage() {
     return (
@@ -320,21 +312,27 @@ export default function LandingPage() {
                             <p className="text-xs italic" style={{ color: '#C9B59C80' }}>© 2026 Fixano. All rights reserved.</p>
                         </div>
                         {[
-                            { title: 'Platform', links: [
-                                { label: 'Find Pros', to: '/register?role=helped' },
-                                { label: 'Technician Portal', to: '/register?role=helper' },
-                                { label: 'How It Works', to: '/' },
-                            ]},
-                            { title: 'Legal', links: [
-                                { label: 'Terms of Service', to: '/page/terms' },
-                                { label: 'Privacy Policy', to: '/page/privacy' },
-                                { label: 'Cookie Policy', to: '/page/cookies' },
-                            ]},
-                            { title: 'Support', links: [
-                                { label: 'Help Center', to: '/page/help' },
-                                { label: 'Contact Support', to: '/page/contact' },
-                                { label: 'About Us', to: '/page/about' },
-                            ]},
+                            {
+                                title: 'Platform', links: [
+                                    { label: 'Find Pros', to: '/register?role=helped' },
+                                    { label: 'Technician Portal', to: '/register?role=helper' },
+                                    { label: 'How It Works', to: '/' },
+                                ]
+                            },
+                            {
+                                title: 'Legal', links: [
+                                    { label: 'Terms of Service', to: '/page/terms' },
+                                    { label: 'Privacy Policy', to: '/page/privacy' },
+                                    { label: 'Cookie Policy', to: '/page/cookies' },
+                                ]
+                            },
+                            {
+                                title: 'Support', links: [
+                                    { label: 'Help Center', to: '/page/help' },
+                                    { label: 'Contact Support', to: '/page/contact' },
+                                    { label: 'About Us', to: '/page/about' },
+                                ]
+                            },
                         ].map((col, i) => (
                             <div key={i}>
                                 <h4 className="font-bold mb-6 text-xs uppercase tracking-widest" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#C9B59C' }}>{col.title}</h4>

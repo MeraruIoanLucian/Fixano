@@ -6,6 +6,7 @@ import SectionHeading from '../components/SectionHeading'
 import { StatusBadge, UrgencyBadge, type JobStatus } from '../components/StatusBadge'
 import EmptyState from '../components/EmptyState'
 import AlertMessage from '../components/AlertMessage'
+import { CATEGORIES } from '../lib/constants'
 
 interface Job {
     id: string
@@ -25,15 +26,6 @@ const TABS: { label: string; value: JobStatus | 'all' }[] = [
     { label: 'Awaiting Approval', value: 'pending_completion' },
     { label: 'Completed', value: 'completed' },
     { label: 'Cancelled', value: 'cancelled' },
-]
-
-const CATEGORIES = [
-    { value: 'Instalații Apă', icon: 'plumbing', label: 'Plumbing' },
-    { value: 'Electrice', icon: 'bolt', label: 'Electrical' },
-    { value: 'Gaze', icon: 'gas_meter', label: 'Gas' },
-    { value: 'Centrale Termice', icon: 'device_thermostat', label: 'Heating' },
-    { value: 'Climatizare', icon: 'ac_unit', label: 'HVAC' },
-    { value: 'Altele', icon: 'handyman', label: 'Other' },
 ]
 
 const URGENCIES = [

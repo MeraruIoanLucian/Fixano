@@ -20,7 +20,7 @@ export default function DashboardLayout() {
         ),
         ...(isHelper
             ? [{ to: '/marketplace', icon: 'work', label: 'Browse jobs' }]
-            : [{ to: '/helped-jobs', icon: 'pending_actions', label: 'My Jobs' }]
+            : [{ to: '/marketplace', icon: 'pending_actions', label: 'My Jobs' }]
         ),
         { to: '/chat', icon: 'chat', label: 'Messages' },
         { to: '/profile', icon: 'settings', label: 'Settings' },
@@ -28,7 +28,7 @@ export default function DashboardLayout() {
 
     const mobileNav = [
         { to: '/dashboard', icon: 'home', label: 'Home' },
-        { to: isHelper ? '/helped-jobs' : '/create-job', icon: isHelper ? 'search' : 'add_circle', label: isHelper ? 'Browse' : 'Create' },
+        { to: isHelper ? '/marketplace' : '/create-job', icon: isHelper ? 'search' : 'add_circle', label: isHelper ? 'Browse' : 'Create' },
         { to: '/helped-jobs', icon: 'pending_actions', label: 'Activity' },
         { to: '/profile', icon: 'person', label: 'Profile' },
     ]

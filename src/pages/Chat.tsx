@@ -101,7 +101,7 @@ export default function Chat() {
                                             </div>
                                             {lastMsg && (
                                                 <p className="text-xs mt-1 truncate" style={{ color: '#A89882' }}>
-                                                    {lastMsg.type === 'image' ? '📷 Photo' : lastMsg.body}
+                                                    {lastMsg.type === 'image' ? '📷 Photo' : lastMsg.type === 'offer' ? '💰 Price Offer' : lastMsg.body}
                                                 </p>
                                             )}
                                         </div>

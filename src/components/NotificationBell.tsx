@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useNotifications } from '../hooks/useNotifications'
 
@@ -8,6 +8,7 @@ export default function NotificationBell() {
     const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications()
     const [open, setOpen] = useState(false)
     const navigate = useNavigate()
+    const dropdownRef = useRef<HTMLDivElement>(null)
 
     // icon + culoare pt fiecare tip de notificare
     function getIcon(type: string) {
@@ -18,6 +19,7 @@ export default function NotificationBell() {
             case 'offer_rejected': return 'cancel'
             case 'message': return 'chat'
             case 'job_completed': return 'task_alt'
+            case 'chat_offer': return 'payments'
             default: return 'notifications'
         }
     }
@@ -27,11 +29,27 @@ export default function NotificationBell() {
         if (type === 'offer_received' || type === 'offer_accepted') return '#065F46'
         if (type === 'message') return '#3B82F6'
         if (type === 'job_completed') return '#10B981'
+        if (type === 'chat_offer') return '#F59E0B'
         return '#C9B59C'
     }
 
+    // inchide dropdown-ul daca se da click in afara
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setOpen(false)
+            }
+        }
+        if (open) {
+            document.addEventListener('mousedown', handleClickOutside)
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside)
+        }
+    }, [open])
+
     return (
-        <div className="relative">
+        <div className="relative" ref={dropdownRef}>
             <button onClick={() => setOpen(!open)}
                 className="w-10 h-10 rounded-full flex items-center justify-center transition-colors cursor-pointer"
                 style={{ background: open ? '#EFE9E3' : 'transparent' }}>

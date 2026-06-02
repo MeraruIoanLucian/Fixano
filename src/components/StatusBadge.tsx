@@ -2,18 +2,18 @@ type JobStatus = 'open' | 'assigned' | 'in_progress' | 'pending_completion' | 'c
 type Urgency = 'low' | 'medium' | 'urgent'
 
 const STATUS_MAP: Record<JobStatus, { bg: string; color: string; label: string }> = {
-    open: { bg: '#C9B59C30', color: 'var(--brand-dark)', label: 'Open' },
-    assigned: { bg: '#E0E7FF', color: '#3730A3', label: 'Assigned' },
-    in_progress: { bg: '#FEF3C7', color: '#92400E', label: 'In Progress' },
-    completed: { bg: '#D1FAE5', color: '#065F46', label: 'Completed' },
-    pending_completion: { bg: '#DBEAFE', color: '#1E40AF', label: 'Pending Approval' },
+    open: { bg: '#EFE9E3', color: '#6B5E50', label: 'Open' },
+    assigned: { bg: '#E6E9EE', color: '#4B5563', label: 'Assigned' },
+    in_progress: { bg: '#FDF3E1', color: '#9A6A24', label: 'In Progress' },
+    completed: { bg: '#E8EFE9', color: '#40624A', label: 'Completed' },
+    pending_completion: { bg: '#F4EBE6', color: '#8B5A51', label: 'Pending Approval' },
     cancelled: { bg: '#F3F4F6', color: '#6B7280', label: 'Cancelled' },
 }
 
 const URGENCY_MAP: Record<Urgency, { bg: string; color: string; label: string }> = {
-    low: { bg: '#D1FAE5', color: '#065F46', label: 'Low Urgency' },
-    medium: { bg: '#FEF3C7', color: '#92400E', label: 'Medium' },
-    urgent: { bg: '#FEE2E2', color: '#991B1B', label: 'Emergency' },
+    low: { bg: '#E8EFE9', color: '#40624A', label: 'Low Urgency' },
+    medium: { bg: '#EFE9E3', color: '#6B5E50', label: 'Medium' },
+    urgent: { bg: '#FCEAE8', color: '#9E3535', label: 'Emergency' },
 }
 
 export function StatusBadge({ status }: { status: string }) {
