@@ -21,6 +21,9 @@ export default function ProfilePage() {
     const [saving, setSaving] = useState(false)
     const [saveMsg, setSaveMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
+    // state pt conectare Stripe
+    const [connectingStripe, setConnectingStripe] = useState(false)
+
     function startEditing() {
         // resetam la valorile curente din profil
         setEditName(profile?.full_name ?? '')
@@ -67,6 +70,25 @@ export default function ProfilePage() {
     async function handleSignOut() {
         await signOut()
         navigate('/')
+    }
+
+    // redirect la Stripe Express onboarding
+    async function handleConnectStripe() {
+        setConnectingStripe(true)
+        try {
+            const { data, error } = await supabase.functions.invoke('connect-onboarding', {
+                body: { return_url: window.location.origin + '/profile' }
+            })
+            if (error) throw error
+            if (data?.url) {
+                window.location.href = data.url
+            }
+        } catch (err) {
+            console.error('Stripe connect error:', err)
+            setSaveMsg({ type: 'error', text: 'Failed to connect payout account. Please try again.' })
+        } finally {
+            setConnectingStripe(false)
+        }
     }
 
     async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -296,6 +318,56 @@ export default function ProfilePage() {
                         </div>
                     </div>
                 </div>
+
+                {/* Payout Account — doar pt helperi */}
+                {profile?.role === 'helper' && (
+                    <div className="rounded-[2rem] p-8 mt-6" style={{ background: '#FFFFFF', boxShadow: '0 24px 48px rgba(44,36,25,0.04)' }}>
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="p-2 rounded-xl" style={{ background: '#C9B59C20' }}>
+                                <span className="material-symbols-outlined" style={{ color: '#C9B59C' }}>account_balance</span>
+                            </div>
+                            <h2 className="text-xl font-bold" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#2c2419' }}>Payout Account</h2>
+                        </div>
+
+                        {profile.stripe_account_id ? (
+                            <div className="flex items-center justify-between flex-wrap gap-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#D1FAE5' }}>
+                                        <span className="material-symbols-outlined" style={{ color: '#065F46', fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-bold" style={{ color: '#065F46' }}>Payout account connected</div>
+                                        <div className="text-xs" style={{ color: '#6b5e50' }}>You'll receive payments when homeowners confirm job completion.</div>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={handleConnectStripe}
+                                    disabled={connectingStripe}
+                                    className="px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                                    style={{ background: '#EFE9E3', color: '#2c2419' }}>
+                                    Update
+                                </button>
+                            </div>
+                        ) : (
+                            <div>
+                                <p className="text-sm mb-4 leading-relaxed" style={{ color: '#6b5e50' }}>
+                                    Connect your payout account to receive payments from homeowners. This is required before you can be hired for jobs.
+                                </p>
+                                <button
+                                    onClick={handleConnectStripe}
+                                    disabled={connectingStripe}
+                                    className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all duration-200 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+                                    style={{ background: '#2c2419', color: '#F9F8F6' }}>
+                                    {connectingStripe ? (
+                                        <><span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>Connecting...</>
+                                    ) : (
+                                        <><span className="material-symbols-outlined text-sm">account_balance</span>Connect Payout Account</>
+                                    )}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Quick Actions */}
                 <div className="rounded-[2rem] p-8 mt-6 flex flex-col sm:flex-row justify-between items-center gap-6" style={{ background: '#EFE9E3' }}>

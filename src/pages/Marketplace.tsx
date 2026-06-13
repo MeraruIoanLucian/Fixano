@@ -19,14 +19,7 @@ interface Job {
     created_at: string
 }
 
-const TABS: { label: string; value: JobStatus | 'all' }[] = [
-    { label: 'All', value: 'all' },
-    { label: 'Open', value: 'open' },
-    { label: 'Assigned', value: 'assigned' },
-    { label: 'Awaiting Approval', value: 'pending_completion' },
-    { label: 'Completed', value: 'completed' },
-    { label: 'Cancelled', value: 'cancelled' },
-]
+
 
 const URGENCIES = [
     { value: 'low', label: 'Low', color: '#065F46', bg: '#D1FAE5' },
@@ -40,13 +33,13 @@ export default function Marketplace() {
     const [jobs, setJobs] = useState<Job[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [activeTab, setActiveTab] = useState<JobStatus | 'all'>('all')
 
     // filtre noi
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
     const [selectedUrgency, setSelectedUrgency] = useState<string | null>(null)
     const [showFilters, setShowFilters] = useState(false)
+    const [sortBy, setSortBy] = useState<'latest' | 'urgency'>('latest')
 
     useEffect(() => { if (profile?.role === 'helped') navigate('/dashboard') }, [profile])
 
@@ -56,7 +49,7 @@ export default function Marketplace() {
             setLoading(true); setError(null)
             const { data, error: fetchError } = await supabase
                 .from('jobs').select('*')
-                .or(`status.eq.open,helper_id.eq.${user.id}`)
+                .eq('status', 'open')
                 .order('created_at', { ascending: false })
             if (fetchError) setError(fetchError.message)
             else setJobs(data ?? [])
@@ -65,10 +58,8 @@ export default function Marketplace() {
         fetchJobs()
     }, [user])
 
-    // filtram client-side — status tab + search + categorie + urgenta
+    // filtram client-side — search + categorie + urgenta
     const filteredJobs = jobs.filter((job) => {
-        // tab filter
-        if (activeTab !== 'all' && job.status !== activeTab) return false
         // search by title
         if (searchQuery.trim() && !job.title.toLowerCase().includes(searchQuery.toLowerCase())) return false
         // category filter
@@ -78,8 +69,17 @@ export default function Marketplace() {
         return true
     })
 
-    const counts: Record<string, number> = { all: jobs.length }
-    for (const j of jobs) counts[j.status] = (counts[j.status] ?? 0) + 1
+    const sortedJobs = [...filteredJobs].sort((a, b) => {
+        if (sortBy === 'latest') {
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        } else {
+            const urgencyWeight: Record<string, number> = { urgent: 3, medium: 2, low: 1 }
+            const wA = urgencyWeight[a.urgency] ?? 0
+            const wB = urgencyWeight[b.urgency] ?? 0
+            if (wA !== wB) return wB - wA
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        }
+    })
 
     const hasActiveFilters = searchQuery.trim() || selectedCategory || selectedUrgency
 
@@ -116,20 +116,33 @@ export default function Marketplace() {
                                 </button>
                             )}
                         </div>
-                        <button
-                            onClick={() => setShowFilters(!showFilters)}
-                            className="flex items-center gap-2 px-5 py-3.5 rounded-2xl font-bold text-sm transition-all cursor-pointer"
-                            style={{
-                                background: showFilters || hasActiveFilters ? '#2c2419' : '#FFFFFF',
-                                color: showFilters || hasActiveFilters ? '#F9F8F6' : '#6b5e50',
-                                border: '1px solid #D9CFC7',
-                            }}>
-                            <span className="material-symbols-outlined text-sm">tune</span>
-                            Filters
-                            {hasActiveFilters && (
-                                <span className="w-2 h-2 rounded-full" style={{ background: '#C9B59C' }} />
-                            )}
-                        </button>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setSortBy(sortBy === 'latest' ? 'urgency' : 'latest')}
+                                className="flex items-center gap-2 px-5 py-3.5 rounded-2xl font-bold text-sm transition-all cursor-pointer"
+                                style={{
+                                    background: sortBy === 'urgency' ? '#2c2419' : '#FFFFFF',
+                                    color: sortBy === 'urgency' ? '#F9F8F6' : '#6b5e50',
+                                    border: '1px solid #D9CFC7',
+                                }}>
+                                <span className="material-symbols-outlined text-sm">sort</span>
+                                Sort: {sortBy === 'latest' ? 'Latest' : 'Urgency'}
+                            </button>
+                            <button
+                                onClick={() => setShowFilters(!showFilters)}
+                                className="flex items-center gap-2 px-5 py-3.5 rounded-2xl font-bold text-sm transition-all cursor-pointer"
+                                style={{
+                                    background: showFilters || hasActiveFilters ? '#2c2419' : '#FFFFFF',
+                                    color: showFilters || hasActiveFilters ? '#F9F8F6' : '#6b5e50',
+                                    border: '1px solid #D9CFC7',
+                                }}>
+                                <span className="material-symbols-outlined text-sm">tune</span>
+                                Filters
+                                {hasActiveFilters && (
+                                    <span className="w-2 h-2 rounded-full" style={{ background: '#C9B59C' }} />
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </section>
 
@@ -187,39 +200,11 @@ export default function Marketplace() {
                     </section>
                 )}
 
-                {/* Tab Filter Bar */}
-                <section className="mb-12 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-                    <div className="flex items-center gap-3 min-w-max pb-4">
-                        {TABS.map((tab) => {
-                            const isActive = activeTab === tab.value
-                            const count = counts[tab.value] ?? 0
-                            return (
-                                <button key={tab.value} onClick={() => setActiveTab(tab.value)}
-                                    className="flex items-center px-6 py-3 rounded-full font-bold transition-all duration-200 cursor-pointer"
-                                    style={{
-                                        fontFamily: "'Plus Jakarta Sans', sans-serif",
-                                        background: isActive ? '#2c2419' : '#FFFFFF',
-                                        color: isActive ? '#F9F8F6' : '#6b5e50',
-                                        boxShadow: isActive ? '0 8px 24px rgba(44,36,25,0.15)' : 'none',
-                                    }}>
-                                    <span>{tab.label}</span>
-                                    {count > 0 && (
-                                        <span className="ml-2 px-2 py-0.5 text-xs rounded-full font-bold"
-                                            style={{ background: isActive ? '#C9B59C' : '#EFE9E3', color: '#2c2419' }}>
-                                            {count}
-                                        </span>
-                                    )}
-                                </button>
-                            )
-                        })}
-                    </div>
-                </section>
-
                 {/* Active filters summary */}
                 {hasActiveFilters && !loading && (
                     <div className="mb-6 flex items-center gap-2 text-sm" style={{ color: '#6b5e50' }}>
                         <span className="material-symbols-outlined text-sm">filter_list</span>
-                        <span>Showing <strong style={{ color: '#2c2419' }}>{filteredJobs.length}</strong> of {jobs.length} jobs</span>
+                        <span>Showing <strong style={{ color: '#2c2419' }}>{sortedJobs.length}</strong> of {jobs.length} jobs</span>
                         {selectedCategory && (
                             <span className="px-3 py-1 rounded-full text-xs font-bold" style={{ background: '#EFE9E3', color: '#2c2419' }}>
                                 {CATEGORIES.find(c => c.value === selectedCategory)?.label}
@@ -247,17 +232,17 @@ export default function Marketplace() {
                 {error && <div className="mb-6"><AlertMessage type="error" message={error} /></div>}
 
                 {/* Empty State */}
-                {!loading && !error && filteredJobs.length === 0 && (
+                {!loading && !error && sortedJobs.length === 0 && (
                     <EmptyState
-                        title={hasActiveFilters ? 'No matching jobs' : (activeTab === 'all' ? 'No jobs available yet' : `No ${TABS.find(t => t.value === activeTab)?.label.toLowerCase()} jobs`)}
-                        description={hasActiveFilters ? 'Try adjusting your filters or search query.' : (activeTab === 'all' ? "Couldn't find any job posts matching your criteria." : 'Try selecting a different tab.')}
+                        title={hasActiveFilters ? 'No matching jobs' : 'No jobs available yet'}
+                        description={hasActiveFilters ? 'Try adjusting your filters or search query.' : "Couldn't find any open jobs at the moment."}
                     />
                 )}
 
                 {/* Jobs Grid */}
-                {!loading && !error && filteredJobs.length > 0 && (
+                {!loading && !error && sortedJobs.length > 0 && (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        {filteredJobs.map((job) => {
+                        {sortedJobs.map((job) => {
                             const isCompleted = job.status === 'completed' || job.status === 'cancelled'
                             return (
                                 <div key={job.id}

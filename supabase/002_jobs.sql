@@ -13,7 +13,7 @@ create table public.jobs (
   urgency text not null default 'medium' check (urgency in ('low', 'medium', 'urgent')),
   budget text,                              -- free-text like "200-400 RON"
   status text not null default 'open' check (status in ('open', 'assigned', 'in_progress', 'completed', 'cancelled')),
-  helper_id uuid references public.profiles(id),
+  helper_id uuid references public.profiles(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -46,3 +46,20 @@ create policy "Owners can delete own jobs"
 create index jobs_owner_id_idx on public.jobs(owner_id);
 create index jobs_status_idx on public.jobs(status);
 create index jobs_category_idx on public.jobs(category);
+
+-- 5. Trigger for helper account deletion
+create or replace function public.handle_job_helper_deleted()
+returns trigger as $$
+begin
+  -- If the helper_id is set to null (because the helper deleted their account) 
+  -- and the job was currently being worked on, revert it to 'open'
+  if old.helper_id is not null and new.helper_id is null and old.status in ('assigned', 'in_progress', 'pending_completion') then
+    new.status = 'open';
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+create trigger on_job_helper_deleted
+  before update on public.jobs
+  for each row execute function public.handle_job_helper_deleted();

@@ -14,6 +14,7 @@ export interface Profile {
     bio: string | null
     rating_avg: number
     rating_count: number
+    stripe_account_id: string | null
 }
 
 interface AuthState {

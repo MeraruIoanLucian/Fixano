@@ -327,12 +327,25 @@ export default function JobDetails() {
                                         <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#6EE7B7' }}>Action Required</span>
                                     </div>
                                     <h3 className="text-xl font-bold mb-3" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#FFFFFF' }}>Job marked as done</h3>
-                                    <p className="leading-relaxed mb-8" style={{ color: '#A7F3D0' }}>The technician finished the work. Please confirm or report any issues.</p>
+                                    <p className="leading-relaxed mb-8" style={{ color: '#A7F3D0' }}>The technician finished the work. Confirm to release the payment to their account.</p>
                                     <div className='flex gap-4'>
                                         <GradientButton onClick={async () => {
-                                            await supabase.from('jobs').update({ status: 'completed' }).eq('id', job.id)
-                                            setJob({ ...job, status: 'completed' })
-                                        }} variant="secondary" icon="verified" size="sm">Confirm Completion</GradientButton>
+                                            // trecem prin Edge Function care face si transferul Stripe
+                                            try {
+                                                const { data, error } = await supabase.functions.invoke('confirm-transfer', {
+                                                    body: { job_id: job.id }
+                                                })
+                                                if (error) throw error
+                                                if (data?.error) {
+                                                    alert(data.error)
+                                                    return
+                                                }
+                                                setJob({ ...job, status: 'completed' })
+                                            } catch (err: any) {
+                                                console.error('Transfer error:', err)
+                                                alert('Failed to process payment. Please try again.')
+                                            }
+                                        }} variant="secondary" icon="verified" size="sm">Confirm & Release Payment</GradientButton>
                                         <GradientButton variant="outline" icon="flag" size="sm">Report Issue</GradientButton>
                                     </div>
                                 </div>

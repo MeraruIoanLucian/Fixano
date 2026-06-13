@@ -74,7 +74,7 @@ export default function Dashboard() {
     const cards = isHelper
         ? [
             { img: technicianImg, badge: 'Marketplace', badgeBg: '#C9B59C', title: 'Explore Available Jobs', desc: 'Find jobs that match your skills and interests from our curated directory of home projects.', link: '/marketplace', primary: true, icon: 'search', cta: 'Browse Jobs' },
-            { img: manageJobsImg, badge: 'Active Status', badgeBg: '#EFE9E3', title: 'See Your Jobs', desc: 'Track and manage your assigned jobs. View timelines, documents, and messaging history.', link: '/marketplace', primary: false, icon: 'visibility', cta: 'View Jobs' },
+            { img: manageJobsImg, badge: 'Active Status', badgeBg: '#EFE9E3', title: 'See Your Jobs', desc: 'Track and manage your assigned jobs. View timelines, documents, and messaging history.', link: '/helper-jobs', primary: false, icon: 'visibility', cta: 'View Jobs' },
         ]
         : [
             { img: createJobImg, badge: 'New Project', badgeBg: '#C9B59C', title: 'Create a Job', desc: "Describe your problem and we'll match you with the right helper from our curated directory of experts.", link: '/create-job', primary: true, icon: 'arrow_forward', cta: 'Start Now' },

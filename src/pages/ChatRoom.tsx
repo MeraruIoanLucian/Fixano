@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react"
-import { useParams, Link } from "react-router-dom"
+import { useParams, Link, useSearchParams } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import { supabase } from "../lib/supabase"
 import GradientButton from "../components/GradientButton"
@@ -20,10 +20,13 @@ export default function ChatRoom() {
     const [jobStatus, setJobStatus] = useState<string | null>(null)
     const { user } = useAuth()
     const { conversationId } = useParams() as { conversationId: string }
+    const [searchParams, setSearchParams] = useSearchParams()
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const messagesContainerRef = useRef<HTMLDivElement>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const intervalRef = useRef<number | null>(null)
+    // banner pt feedback dupa plata
+    const [paymentBanner, setPaymentBanner] = useState<'success' | 'cancelled' | null>(null)
 
     // la mount iau conversatia si mesajele
     useEffect(() => {
@@ -67,6 +70,17 @@ export default function ChatRoom() {
         }
         fetchData()
     }, [conversationId])
+
+    // daca vine redirect de la Stripe, afisam banner
+    useEffect(() => {
+        const paymentStatus = searchParams.get('payment')
+        if (paymentStatus === 'success' || paymentStatus === 'cancelled') {
+            setPaymentBanner(paymentStatus)
+            // stergem param-ul din URL ca sa nu ramana
+            searchParams.delete('payment')
+            setSearchParams(searchParams, { replace: true })
+        }
+    }, [])
 
     // polling pt mesaje noi la 4 secunde
     useEffect(() => {
@@ -246,15 +260,32 @@ export default function ChatRoom() {
         setOfferLoading(false)
     }
 
-    // accept oferta din chat
+    // accept oferta din chat — acum trece prin Stripe Checkout
     async function handleAcceptOffer(offerId: string) {
         setOfferLoading(true)
-        await supabase.from('chat_offers').update({ status: 'accepted' }).eq('id', offerId)
-        // update local
-        setChatOffers((prev: any) => ({ ...prev, [offerId]: { ...prev[offerId], status: 'accepted' } }))
-        // jobul devine assigned (trigger-ul face asta in DB)
-        setJobStatus('assigned')
-        setOfferLoading(false)
+        try {
+            const { data, error } = await supabase.functions.invoke('create-checkout', {
+                body: {
+                    chat_offer_id: offerId,
+                    frontend_url: window.location.origin
+                }
+            })
+            if (error) throw error
+            if (data?.error) {
+                // eroare de la Edge Function (ex: helper n-are cont Stripe)
+                alert(data.error)
+                setOfferLoading(false)
+                return
+            }
+            // redirect la Stripe Checkout
+            if (data?.url) {
+                window.location.href = data.url
+            }
+        } catch (err: any) {
+            console.error('Checkout error:', err)
+            alert('Payment failed. Please try again.')
+            setOfferLoading(false)
+        }
     }
 
     // decline oferta din chat
@@ -302,6 +333,32 @@ export default function ChatRoom() {
 
 
                 <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-6 py-4 space-y-3" style={{ background: '#F9F8F6' }}>
+
+                    {/* banner dupa plata Stripe */}
+                    {paymentBanner === 'success' && (
+                        <div className="flex items-center gap-3 p-4 rounded-2xl mb-3" style={{ background: '#D1FAE5', border: '1px solid #86EFAC' }}>
+                            <span className="material-symbols-outlined" style={{ color: '#065F46', fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                            <div>
+                                <div className="text-sm font-bold" style={{ color: '#065F46' }}>Payment confirmed!</div>
+                                <div className="text-xs" style={{ color: '#065F46' }}>The job has been assigned. The technician can now start working.</div>
+                            </div>
+                            <button onClick={() => setPaymentBanner(null)} className="ml-auto cursor-pointer">
+                                <span className="material-symbols-outlined text-sm" style={{ color: '#065F46' }}>close</span>
+                            </button>
+                        </div>
+                    )}
+                    {paymentBanner === 'cancelled' && (
+                        <div className="flex items-center gap-3 p-4 rounded-2xl mb-3" style={{ background: '#FEF3C7', border: '1px solid #FCD34D' }}>
+                            <span className="material-symbols-outlined" style={{ color: '#92400E' }}>warning</span>
+                            <div>
+                                <div className="text-sm font-bold" style={{ color: '#92400E' }}>Payment cancelled</div>
+                                <div className="text-xs" style={{ color: '#92400E' }}>The offer was not accepted. You can try again anytime.</div>
+                            </div>
+                            <button onClick={() => setPaymentBanner(null)} className="ml-auto cursor-pointer">
+                                <span className="material-symbols-outlined text-sm" style={{ color: '#92400E' }}>close</span>
+                            </button>
+                        </div>
+                    )}
                     {messages.map(msg => {
                         const isMine = msg.sender_id === user?.id
 

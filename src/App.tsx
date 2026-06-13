@@ -23,6 +23,7 @@ import Chat from './pages/Chat'
 import ChatRoom from './pages/ChatRoom'
 import Marketplace from './pages/Marketplace'
 import StaticPage from './pages/StaticPage'
+import HelperJobs from './pages/HelperJobs'
 import './index.css'
 
 export default function App() {
@@ -47,6 +48,7 @@ export default function App() {
             <Route path="/create-job" element={<CreateJobPage />} />
             <Route path="/helped-jobs" element={<HelpedJobs />} />
             <Route path="/marketplace" element={<Marketplace />} />
+            <Route path="/helper-jobs" element={<HelperJobs />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/profile/:id" element={<PublicProfile />} />
             <Route path="/jobs/:id" element={<JobDetails />} />
