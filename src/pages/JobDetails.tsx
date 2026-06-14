@@ -185,6 +185,25 @@ export default function JobDetails() {
                                 <p className="leading-relaxed" style={{ color: '#2c2419' }}>{job.description}</p>
                             </div>
 
+                            {/* Locatie */}
+                            <div className="mb-8">
+                                <h3 className="text-sm font-bold uppercase tracking-widest mb-3" style={{ color: '#6b5e50' }}>Location</h3>
+                                <div className="flex flex-col gap-1">
+                                    <span className="flex items-center gap-2 text-sm" style={{ color: '#2c2419' }}>
+                                        <span className="material-symbols-outlined text-base" style={{ color: '#A89882' }}>location_on</span>
+                                        {job.city !== '-' ? job.city : 'City not provided'}
+                                    </span>
+                                    {(job.owner_id === user?.id || job.helper_id === user?.id) && (job.street !== '-' || job.building !== '-' || job.apartment !== '-') && (
+                                        <div className="mt-2 p-4 rounded-xl" style={{ background: '#F9F8F6', border: '1px solid #EFE9E3' }}>
+                                            <span className="text-[10px] font-bold uppercase tracking-widest mb-2 block" style={{ color: '#A89882' }}>Address</span>
+                                            <span className="text-sm font-medium" style={{ color: '#2c2419' }}>
+                                                {job.street !== '-' ? job.street : ''} {job.building !== '-' ? job.building : ''} {job.apartment !== '-' ? `, ${job.apartment}` : ''}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
                             {/* Galerie imagini daca exista */}
                             {job.image_urls && job.image_urls.length > 0 && (
                                 <div className="mb-8">

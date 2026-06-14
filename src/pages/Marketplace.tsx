@@ -13,6 +13,7 @@ interface Job {
     title: string
     description: string
     category: string
+    city: string
     urgency: 'low' | 'medium' | 'urgent'
     budget: string | null
     status: JobStatus
@@ -38,8 +39,39 @@ export default function Marketplace() {
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
     const [selectedUrgency, setSelectedUrgency] = useState<string | null>(null)
+    const [cityFilter, setCityFilter] = useState('')
     const [showFilters, setShowFilters] = useState(false)
     const [sortBy, setSortBy] = useState<'latest' | 'urgency'>('latest')
+    const [locating, setLocating] = useState(false)
+
+    async function detectLocation() {
+        if (!navigator.geolocation) {
+            alert('Browser-ul tau nu suporta geolocatia.')
+            return
+        }
+        setLocating(true)
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            try {
+                // folosim Nominatim API (free, no key required)
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`)
+                const data = await res.json()
+                const detectedCity = data.address?.city || data.address?.town || data.address?.village || data.address?.county
+                if (detectedCity) {
+                    setCityFilter(detectedCity)
+                } else {
+                    alert('Nu am putut extrage numele orasului.')
+                }
+            } catch (err) {
+                console.error(err)
+                alert('Eroare la detectarea orasului.')
+            } finally {
+                setLocating(false)
+            }
+        }, () => {
+            alert('Accesul la locatie a fost refuzat sau a aparut o eroare.')
+            setLocating(false)
+        })
+    }
 
     useEffect(() => { if (profile?.role === 'helped') navigate('/dashboard') }, [profile])
 
@@ -58,10 +90,28 @@ export default function Marketplace() {
         fetchJobs()
     }, [user])
 
-    // filtram client-side — search + categorie + urgenta
+    // set default city filter from profile
+    useEffect(() => {
+        if (profile?.city && !cityFilter) {
+            setCityFilter(profile.city)
+        }
+    }, [profile])
+
+    // utilitar pentru eliminarea diacriticelor, spatiilor si cratimelor
+    const normalizeString = (str: string) => {
+        return str
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "") // scoate diacritice
+            .replace(/[^a-zA-Z0-9]/g, "") // scoate spatii, cratime, virgule etc.
+            .toLowerCase()
+    }
+
+    // filtram client-side — search + categorie + urgenta + oras
     const filteredJobs = jobs.filter((job) => {
         // search by title
-        if (searchQuery.trim() && !job.title.toLowerCase().includes(searchQuery.toLowerCase())) return false
+        if (searchQuery.trim() && !normalizeString(job.title).includes(normalizeString(searchQuery))) return false
+        // city filter (ignoring diacritics)
+        if (cityFilter.trim() && !normalizeString(job.city).includes(normalizeString(cityFilter))) return false
         // category filter
         if (selectedCategory && job.category !== selectedCategory) return false
         // urgency filter
@@ -81,10 +131,11 @@ export default function Marketplace() {
         }
     })
 
-    const hasActiveFilters = searchQuery.trim() || selectedCategory || selectedUrgency
+    const hasActiveFilters = searchQuery.trim() || cityFilter.trim() || selectedCategory || selectedUrgency
 
     function clearFilters() {
         setSearchQuery('')
+        setCityFilter('')
         setSelectedCategory(null)
         setSelectedUrgency(null)
     }
@@ -143,6 +194,34 @@ export default function Marketplace() {
                                 )}
                             </button>
                         </div>
+                    </div>
+                    {/* Location Filter Row */}
+                    <div className="flex items-center gap-3 mt-4">
+                        <div className="flex-1 relative">
+                            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-lg" style={{ color: '#A89882' }}>location_on</span>
+                            <input
+                                type="text"
+                                value={cityFilter}
+                                onChange={e => setCityFilter(e.target.value)}
+                                placeholder="Filter by city..."
+                                className="w-full pl-12 pr-4 py-3.5 rounded-2xl outline-none transition-all text-sm"
+                                style={{ background: '#FFFFFF', border: '1px solid #D9CFC7', color: '#2c2419' }}
+                            />
+                            {cityFilter && (
+                                <button onClick={() => setCityFilter('')}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer">
+                                    <span className="material-symbols-outlined text-sm" style={{ color: '#A89882' }}>close</span>
+                                </button>
+                            )}
+                        </div>
+                        <button
+                            onClick={detectLocation}
+                            disabled={locating}
+                            className="flex items-center gap-2 px-5 py-3.5 rounded-2xl font-bold text-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            style={{ background: '#EFE9E3', color: '#2c2419', border: '1px solid transparent' }}>
+                            <span className="material-symbols-outlined text-sm">{locating ? 'progress_activity' : 'my_location'}</span>
+                            {locating ? 'Locating...' : 'See nearby jobs'}
+                        </button>
                     </div>
                 </section>
 
@@ -203,8 +282,13 @@ export default function Marketplace() {
                 {/* Active filters summary */}
                 {hasActiveFilters && !loading && (
                     <div className="mb-6 flex items-center gap-2 text-sm" style={{ color: '#6b5e50' }}>
-                        <span className="material-symbols-outlined text-sm">filter_list</span>
-                        <span>Showing <strong style={{ color: '#2c2419' }}>{sortedJobs.length}</strong> of {jobs.length} jobs</span>
+                        {cityFilter && (
+                            <span className="px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1" style={{ background: '#EFE9E3', color: '#2c2419' }}>
+                                <span className="material-symbols-outlined text-[12px]">location_on</span>
+                                {cityFilter}
+                                <button onClick={() => setCityFilter('')} className="ml-1.5 cursor-pointer">×</button>
+                            </span>
+                        )}
                         {selectedCategory && (
                             <span className="px-3 py-1 rounded-full text-xs font-bold" style={{ background: '#EFE9E3', color: '#2c2419' }}>
                                 {CATEGORIES.find(c => c.value === selectedCategory)?.label}
@@ -254,10 +338,21 @@ export default function Marketplace() {
                                         <UrgencyBadge urgency={job.urgency} />
                                     </div>
 
-                                    {/* Category chip */}
-                                    <span className="text-[10px] font-bold tracking-widest uppercase mb-2" style={{ color: '#A89882' }}>
-                                        {CATEGORIES.find(c => c.value === job.category)?.label ?? job.category}
-                                    </span>
+                                    {/* Category and City chip */}
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className="text-[10px] font-bold tracking-widest uppercase" style={{ color: '#A89882' }}>
+                                            {CATEGORIES.find(c => c.value === job.category)?.label ?? job.category}
+                                        </span>
+                                        {job.city && job.city !== '-' && (
+                                            <>
+                                                <span style={{ color: '#EFE9E3' }}>•</span>
+                                                <span className="text-[10px] font-bold tracking-widest uppercase flex items-center gap-1" style={{ color: '#A89882' }}>
+                                                    <span className="material-symbols-outlined text-[12px]">location_on</span>
+                                                    {job.city}
+                                                </span>
+                                            </>
+                                        )}
+                                    </div>
 
                                     {/* Title */}
                                     <h3 className="text-2xl md:text-3xl font-extrabold leading-tight mb-4" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#2c2419' }}>

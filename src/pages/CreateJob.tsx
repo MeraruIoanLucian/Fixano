@@ -29,6 +29,10 @@ export default function CreateJobPage() {
     const [category, setCategory] = useState('')
     const [urgency, setUrgency] = useState('')
     const [price, setPrice] = useState('')
+    const [city, setCity] = useState('')
+    const [street, setStreet] = useState('')
+    const [building, setBuilding] = useState('')
+    const [apartment, setApartment] = useState('')
     const [submitting, setSubmitting] = useState(false)
     const [submitError, setSubmitError] = useState<string | null>(null)
 
@@ -90,6 +94,13 @@ export default function CreateJobPage() {
         if (!title.trim()) { setSubmitError('Please enter a job title.'); return }
         if (!description.trim()) { setSubmitError('Please enter a description.'); return }
         if (!urgency) { setSubmitError('Please select an urgency level.'); return }
+        
+        // validare locatie (toate sunt obligatorii)
+        if (!city.trim()) { setSubmitError('Please enter a city.'); return }
+        if (!street.trim()) { setSubmitError('Please enter a street.'); return }
+        if (!building.trim()) { setSubmitError('Please enter a building/number.'); return }
+        if (!apartment.trim()) { setSubmitError('Please enter an apartment.'); return }
+        
         if (!user) { setSubmitError('You must be logged in.'); return }
         setSubmitting(true)
         try {
@@ -107,6 +118,7 @@ export default function CreateJobPage() {
             const { error } = await supabase.from('jobs').insert({
                 owner_id: user.id, title: title.trim(), description: description.trim(),
                 category, urgency, budget: price.trim() || null,
+                city: city.trim(), street: street.trim(), building: building.trim(), apartment: apartment.trim(),
                 image_urls: imageUrls.length > 0 ? imageUrls : undefined,
             })
             if (error) throw new Error(error.message)
@@ -213,6 +225,33 @@ export default function CreateJobPage() {
                                                 {u.label}
                                             </button>
                                         ))}
+                                    </div>
+                                </div>
+
+                                {/* Location Details */}
+                                <div>
+                                    <label className="block font-bold text-lg tracking-tight mb-4" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#2c2419' }}>Location Details</label>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1" style={{ color: '#6b5e50' }}>City *</label>
+                                            <input type="text" value={city} onChange={e => setCity(e.target.value)} placeholder="e.g. Bucuresti"
+                                                className="w-full px-4 py-3 rounded-xl outline-none transition-all text-sm" style={{ background: '#F9F8F6', border: 'none', color: '#2c2419' }} />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1" style={{ color: '#6b5e50' }}>Street *</label>
+                                            <input type="text" value={street} onChange={e => setStreet(e.target.value)} placeholder="e.g. Calea Victoriei"
+                                                className="w-full px-4 py-3 rounded-xl outline-none transition-all text-sm" style={{ background: '#F9F8F6', border: 'none', color: '#2c2419' }} />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1" style={{ color: '#6b5e50' }}>Building / Number *</label>
+                                            <input type="text" value={building} onChange={e => setBuilding(e.target.value)} placeholder="e.g. 15 or Bl. 3"
+                                                className="w-full px-4 py-3 rounded-xl outline-none transition-all text-sm" style={{ background: '#F9F8F6', border: 'none', color: '#2c2419' }} />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1" style={{ color: '#6b5e50' }}>Apartment *</label>
+                                            <input type="text" value={apartment} onChange={e => setApartment(e.target.value)} placeholder="e.g. Ap. 12"
+                                                className="w-full px-4 py-3 rounded-xl outline-none transition-all text-sm" style={{ background: '#F9F8F6', border: 'none', color: '#2c2419' }} />
+                                        </div>
                                     </div>
                                 </div>
 

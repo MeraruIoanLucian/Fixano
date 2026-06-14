@@ -22,6 +22,7 @@ Thumbs.db
 # Project docs (local only)
 CONVENTIONS.md
 Fixano.md
+thesis_sections.md
 
 # Supabase CLI temp
 supabase/.temp/
