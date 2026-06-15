@@ -25,6 +25,13 @@ export default function JobDetails() {
     const [existingReview, setExistingReview] = useState<any>(null)
     const [previewImage, setPreviewImage] = useState<string | null>(null)
 
+    // Dispute states
+    const [disputeModalOpen, setDisputeModalOpen] = useState(false)
+    const [disputeReason, setDisputeReason] = useState('')
+    const [submittingDispute, setSubmittingDispute] = useState(false)
+    const [processingRefund, setProcessingRefund] = useState(false)
+    const [processingEscalate, setProcessingEscalate] = useState(false)
+
     const { user } = useAuth()
     const { id } = useParams()
     const navigate = useNavigate()
@@ -110,6 +117,64 @@ export default function JobDetails() {
             setExistingReview(data)
         }
         setReviewSubmitting(false)
+    }
+
+    async function handleReportIssue() {
+        if (!disputeReason.trim()) return
+        setSubmittingDispute(true)
+        try {
+            const { error } = await supabase.from('jobs').update({
+                status: 'disputed',
+                dispute_reason: disputeReason.trim(),
+                dispute_reporter_id: user?.id
+            }).eq('id', job.id)
+            if (error) throw error
+            setJob({ ...job, status: 'disputed', dispute_reason: disputeReason.trim(), dispute_reporter_id: user?.id })
+            setDisputeModalOpen(false)
+        } catch (err: any) {
+            console.error('Error reporting issue:', err)
+            alert('Could not report issue. Please try again.')
+        } finally {
+            setSubmittingDispute(false)
+        }
+    }
+
+    async function handleAgreeToRefund() {
+        if (!window.confirm('Are you sure? The job will be cancelled and the client will be refunded.')) return
+        setProcessingRefund(true)
+        try {
+            const { data, error } = await supabase.functions.invoke('refund-payment', {
+                body: { job_id: job.id }
+            })
+            if (error) throw error
+            if (data?.error) throw new Error(data.error)
+            setJob({ ...job, status: 'cancelled' })
+            alert('Refund processed successfully.')
+        } catch (err: any) {
+            console.error(err)
+            alert('Failed to process refund: ' + err.message)
+        } finally {
+            setProcessingRefund(false)
+        }
+    }
+
+    async function handleEscalate() {
+        if (!window.confirm('Are you sure you want to escalate this to the Fixano admin?')) return
+        setProcessingEscalate(true)
+        try {
+            const { data, error } = await supabase.functions.invoke('escalate-dispute', {
+                body: { job_id: job.id }
+            })
+            if (error) throw error
+            if (data?.error) throw new Error(data.error)
+            setJob({ ...job, status: 'escalated' })
+            alert('Dispute escalated successfully. Support will contact you.')
+        } catch (err: any) {
+            console.error(err)
+            alert('Failed to escalate: ' + err.message)
+        } finally {
+            setProcessingEscalate(false)
+        }
     }
 
     // Loading
@@ -318,7 +383,7 @@ export default function JobDetails() {
                                             await supabase.from('jobs').update({ status: 'pending_completion' }).eq('id', job.id)
                                             setJob({ ...job, status: 'pending_completion' })
                                         }} variant="secondary" icon="check_circle" size="sm">Mark as Done</GradientButton>
-                                        <GradientButton variant="outline" icon="flag" size="sm">Report Issue</GradientButton>
+                                        <GradientButton onClick={() => setDisputeModalOpen(true)} variant="outline" icon="flag" size="sm">Report Issue</GradientButton>
                                     </div>
                                 </div>
                             </div>
@@ -365,8 +430,55 @@ export default function JobDetails() {
                                                 alert('Failed to process payment. Please try again.')
                                             }
                                         }} variant="secondary" icon="verified" size="sm">Confirm & Release Payment</GradientButton>
-                                        <GradientButton variant="outline" icon="flag" size="sm">Report Issue</GradientButton>
+                                        <GradientButton onClick={() => setDisputeModalOpen(true)} variant="outline" icon="flag" size="sm">Report Issue</GradientButton>
                                     </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Stari de disputa */}
+                        {job.status === 'disputed' && (
+                            <div className="rounded-[2rem] p-8 relative overflow-hidden" style={{ background: '#DC2626' }}>
+                                <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full blur-3xl" style={{ background: 'rgba(254, 202, 202, 0.15)' }} />
+                                <div className="relative z-10">
+                                    <div className="mb-6 flex items-center gap-3">
+                                        <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#FECACA' }} />
+                                        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#FECACA' }}>Action Required (Dispute)</span>
+                                    </div>
+                                    <h3 className="text-xl font-bold mb-3" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#FFFFFF' }}>
+                                        {job.dispute_reporter_id === user?.id ? 'You reported an issue' : 'An issue was reported'}
+                                    </h3>
+                                    
+                                    <div className="mb-8 p-4 rounded-xl" style={{ background: 'rgba(0,0,0,0.2)' }}>
+                                        <span className="text-[10px] font-bold uppercase tracking-widest mb-1 block" style={{ color: '#FECACA' }}>Reason</span>
+                                        <p className="text-sm font-medium leading-relaxed" style={{ color: '#FFFFFF' }}>"{job.dispute_reason}"</p>
+                                    </div>
+
+                                    {job.dispute_reporter_id === user?.id ? (
+                                        <p className="text-sm" style={{ color: '#FECACA' }}>Waiting for the other party to respond. You can still use the chat to talk to them.</p>
+                                    ) : (
+                                        <div className="flex gap-4">
+                                            <GradientButton onClick={handleAgreeToRefund} loading={processingRefund} variant="secondary" icon="check_circle" size="sm">Agree to Refund</GradientButton>
+                                            <button onClick={handleEscalate} disabled={processingEscalate} className="px-6 py-3 rounded-full font-bold text-sm bg-transparent text-white border border-red-300 hover:bg-white hover:text-red-600 transition-colors disabled:opacity-50 flex items-center gap-2">
+                                                {processingEscalate ? <span className="material-symbols-outlined animate-spin">progress_activity</span> : <span className="material-symbols-outlined">gavel</span>}
+                                                Decline & Escalate
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {job.status === 'escalated' && (
+                            <div className="rounded-[2rem] p-8 relative overflow-hidden" style={{ background: '#451A03' }}>
+                                <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full blur-3xl" style={{ background: 'rgba(253, 230, 138, 0.15)' }} />
+                                <div className="relative z-10">
+                                    <div className="mb-6 flex items-center gap-3">
+                                        <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#FDE68A' }} />
+                                        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#FDE68A' }}>Escalated</span>
+                                    </div>
+                                    <h3 className="text-xl font-bold mb-3" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#FFFFFF' }}>Dispute Escalated</h3>
+                                    <p className="leading-relaxed" style={{ color: '#FEF3C7' }}>This job has been escalated to the Fixano administration team. We will review the chat logs and make a final decision regarding the payment shortly.</p>
                                 </div>
                             </div>
                         )}
@@ -532,6 +644,46 @@ export default function JobDetails() {
                     </aside>
                 </div>
             </main>
+
+            {/* Modal de Report Issue */}
+            {disputeModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDisputeModalOpen(false)} />
+                    <div className="relative bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl" style={{ animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", color: '#2c2419' }}>Report an Issue</h3>
+                            <button onClick={() => setDisputeModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
+                                <span className="material-symbols-outlined text-sm" style={{ color: '#2c2419' }}>close</span>
+                            </button>
+                        </div>
+                        
+                        <p className="text-sm mb-6 leading-relaxed" style={{ color: '#6b5e50' }}>
+                            Please describe exactly what went wrong. The other party will see this message and will be asked if they agree to cancel the job and refund the payment.
+                        </p>
+
+                        <div className="mb-8">
+                            <label className="text-[10px] font-bold uppercase tracking-widest mb-3 block" style={{ color: '#A89882' }}>Description</label>
+                            <textarea
+                                value={disputeReason}
+                                onChange={e => setDisputeReason(e.target.value)}
+                                placeholder="E.g., The technician didn't show up / The homeowner refuses to pay"
+                                className="w-full h-32 rounded-xl px-4 py-3 outline-none resize-none transition-all duration-200"
+                                style={{ background: '#F9F8F6', border: '1px solid #D9CFC7', color: '#2c2419' }}
+                                onFocus={(e) => e.target.style.borderColor = '#C9B59C'}
+                                onBlur={(e) => e.target.style.borderColor = '#D9CFC7'}
+                            />
+                        </div>
+
+                        <div className="flex gap-4">
+                            <button onClick={() => setDisputeModalOpen(false)} className="flex-1 py-4 font-bold rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors" style={{ color: '#6b5e50' }}>Cancel</button>
+                            <button onClick={handleReportIssue} disabled={submittingDispute || !disputeReason.trim()} className="flex-1 py-4 font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50" style={{ background: '#DC2626', color: '#FFF' }}>
+                                {submittingDispute ? <span className="material-symbols-outlined animate-spin">progress_activity</span> : <span className="material-symbols-outlined text-base">flag</span>}
+                                Submit Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Fullscreen image preview */}
             {previewImage && (

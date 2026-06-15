@@ -12,8 +12,10 @@ create table public.jobs (
   )),
   urgency text not null default 'medium' check (urgency in ('low', 'medium', 'urgent')),
   budget text,                              -- free-text like "200-400 RON"
-  status text not null default 'open' check (status in ('open', 'assigned', 'in_progress', 'completed', 'cancelled')),
+  status text not null default 'open' check (status in ('open', 'assigned', 'pending_completion', 'completed', 'cancelled', 'disputed', 'escalated')),
   helper_id uuid references public.profiles(id) on delete set null,
+  dispute_reason text,
+  dispute_reporter_id uuid references public.profiles(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

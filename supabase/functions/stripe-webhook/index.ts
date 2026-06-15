@@ -77,7 +77,7 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Webhook not configured." }, 500);
     }
 
-    // ─── 1. Verificam semnatura Stripe ──────────────────────
+    //  1. Verificam semnatura Stripe 
     const rawBody = await req.text();
     const sigHeader = req.headers.get("stripe-signature");
     if (!sigHeader) {
@@ -90,61 +90,86 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Invalid signature." }, 400);
     }
 
-    // ─── 2. Parsam evenimentul ──────────────────────────────
+    //  2. Parsam evenimentul 
     const event = JSON.parse(rawBody);
     console.log("Stripe event:", event.type);
 
-    // ne intereseaza doar checkout.session.completed
-    if (event.type !== "checkout.session.completed") {
+    // ne intereseaza doar checkout.session.completed si charge.refunded
+    if (event.type !== "checkout.session.completed" && event.type !== "charge.refunded") {
       return jsonResponse({ received: true });
     }
 
-    const session = event.data.object;
-    const metadata = session.metadata || {};
-    const chatOfferId = metadata.chat_offer_id;
-    const jobId = metadata.job_id;
-    const payerId = metadata.payer_id;
-    const payeeId = metadata.payee_id;
-
-    if (!chatOfferId || !jobId) {
-      console.error("Missing metadata in checkout session:", metadata);
-      return jsonResponse({ error: "Missing metadata." }, 400);
-    }
-
-    // ─── 3. Update-uri in DB (cu service role) ──────────────
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // 3a. Acceptam oferta din chat
-    // trigger-ul on_chat_offer_accepted se ocupa de:
-    //   - job → assigned
-    //   - offers → accepted/rejected
-    const { error: offerError } = await supabase
-      .from("chat_offers")
-      .update({ status: "accepted" })
-      .eq("id", chatOfferId);
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
+      const metadata = session.metadata || {};
+      const chatOfferId = metadata.chat_offer_id;
+      const jobId = metadata.job_id;
+      const payerId = metadata.payer_id;
+      const payeeId = metadata.payee_id;
 
-    if (offerError) {
-      console.error("Error accepting chat offer:", offerError);
+      if (!chatOfferId || !jobId) {
+        console.error("Missing metadata in checkout session:", metadata);
+        return jsonResponse({ error: "Missing metadata." }, 400);
+      }
+
+      // 3a. Acceptam oferta din chat
+      const { error: offerError } = await supabase
+        .from("chat_offers")
+        .update({ status: "accepted" })
+        .eq("id", chatOfferId);
+
+      if (offerError) {
+        console.error("Error accepting chat offer:", offerError);
+      }
+
+      // 3b. Update payment → held_by_platform
+      const { error: paymentError } = await supabase
+        .from("payments")
+        .update({
+          status: "held_by_platform",
+          stripe_payment_intent_id: session.payment_intent,
+          paid_at: new Date().toISOString(),
+        })
+        .eq("stripe_checkout_session_id", session.id);
+
+      if (paymentError) {
+        console.error("Error updating payment:", paymentError);
+      }
+
+      console.log(`Payment confirmed: job=${jobId}, payer=${payerId}, payee=${payeeId}`);
+      return jsonResponse({ received: true });
     }
 
-    // 3b. Update payment → held_by_platform
-    const { error: paymentError } = await supabase
-      .from("payments")
-      .update({
-        status: "held_by_platform",
-        stripe_payment_intent_id: session.payment_intent,
-        paid_at: new Date().toISOString(),
-      })
-      .eq("stripe_checkout_session_id", session.id);
+    if (event.type === "charge.refunded") {
+      const charge = event.data.object;
+      const paymentIntentId = charge.payment_intent;
+      
+      if (!paymentIntentId) {
+         return jsonResponse({ received: true });
+      }
 
-    if (paymentError) {
-      console.error("Error updating payment:", paymentError);
+      // Cautam plata care a fost refundata
+      const { data: payment } = await supabase
+        .from("payments")
+        .select("id, job_id")
+        .eq("stripe_payment_intent_id", paymentIntentId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (payment) {
+        await supabase.from("payments").update({ status: "refunded" }).eq("id", payment.id);
+        await supabase.from("jobs").update({ status: "cancelled", updated_at: new Date().toISOString() }).eq("id", payment.job_id);
+        console.log(`Refund synced automatically from Stripe Dashboard: job=${payment.job_id}`);
+      } else {
+        console.error(`Payment record not found for refund intent: ${paymentIntentId}`);
+      }
+      return jsonResponse({ received: true });
     }
-
-    console.log(`Payment confirmed: job=${jobId}, payer=${payerId}, payee=${payeeId}`);
-    return jsonResponse({ received: true });
 
   } catch (err) {
     console.error("Webhook error:", err);

@@ -29,7 +29,7 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Stripe not configured." }, 500);
     }
 
-    // ─── 1. Verificam JWT ────────────────────────────────────
+    //  1. Verificam JWT 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return jsonResponse({ error: "Missing Authorization header." }, 401);
@@ -45,7 +45,7 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Invalid or expired token." }, 401);
     }
 
-    // ─── 2. Citim job_id din body ────────────────────────────
+    //  2. Citim job_id din body 
     let body;
     try {
       body = await req.json();
@@ -58,7 +58,7 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "job_id is required." }, 400);
     }
 
-    // ─── 3. Verificam jobul ──────────────────────────────────
+    //  3. Verificam jobul 
     const { data: job } = await supabase
       .from("jobs")
       .select("id, status, owner_id, helper_id")
@@ -76,12 +76,15 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Only the homeowner can confirm completion." }, 403);
     }
 
-    // ─── 4. Iau payment-ul ───────────────────────────────────
+    //  4. Iau payment-ul 
     const { data: payment } = await supabase
       .from("payments")
       .select("id, amount, status, payee_id")
       .eq("job_id", jobId)
-      .single();
+      .eq("status", "held_by_platform")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (!payment) {
       return jsonResponse({ error: "Payment record not found." }, 404);
@@ -90,7 +93,7 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Payment is not held. Current status: " + payment.status }, 400);
     }
 
-    // ─── 5. Iau contul Stripe al helperului ──────────────────
+    //  5. Iau contul Stripe al helperului 
     const { data: helperProfile } = await supabase
       .from("profiles")
       .select("stripe_account_id")
@@ -101,7 +104,7 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Technician has no connected Stripe account." }, 400);
     }
 
-    // ─── 6. Cream transferul Stripe ──────────────────────────
+    //  6. Cream transferul Stripe 
     // Platforma retine 10% comision (pt a acoperi taxele Stripe si profitul).
     // Helper-ul primeste 90% din suma initiala.
     const platformFeePercent = 0.10;
@@ -130,7 +133,7 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Transfer failed: " + transfer.error.message }, 500);
     }
 
-    // ─── 7. Update DB: payment + job ─────────────────────────
+    //  7. Update DB: payment + job 
     // update payment
     await supabase
       .from("payments")

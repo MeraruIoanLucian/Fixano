@@ -49,14 +49,14 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // ─── 1. Check API Key exists ────────────────────────────────────────
+    //  1. Check API Key exists 
     const geminiApiKey = Deno.env.get("GEMINI_API_KEY");
     if (!geminiApiKey) {
       console.error("GEMINI_API_KEY is not set in secrets");
       return jsonResponse({ error: "AI service not configured." }, 500);
     }
 
-    // ─── 2. Verify JWT (only logged-in users) ───────────────────────────
+    //  2. Verify JWT (only logged-in users) 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return jsonResponse({ error: "Missing Authorization header." }, 401);
@@ -74,7 +74,7 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Invalid or expired token." }, 401);
     }
 
-    // ─── 3. Parse request body ──────────────────────────────────────────
+    //  3. Parse request body 
     let body;
     try {
       body = await req.json();
@@ -87,7 +87,7 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Please provide a description (min 5 chars)." }, 400);
     }
 
-    // ─── 4. Call Gemini 2.5 Flash ───────────────────────────────────────
+    //  4. Call Gemini 2.5 Flash 
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
 
     const geminiResponse = await fetch(geminiUrl, {
@@ -113,7 +113,7 @@ Deno.serve(async (req: Request) => {
 
     const geminiData = await geminiResponse.json();
 
-    // ─── 5. Extract and parse AI text ───────────────────────────────────
+    //  5. Extract and parse AI text 
     const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 
     let parsed;
@@ -136,12 +136,12 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // ─── 6. Validate and sanitize ───────────────────────────────────────
+    //  6. Validate and sanitize 
     const category = VALID_CATEGORIES.includes(parsed.category) ? parsed.category : "Altele";
     const urgency = VALID_URGENCIES.includes(parsed.urgency) ? parsed.urgency : "medium";
     const title = typeof parsed.title === "string" ? parsed.title.slice(0, 60) : "Problemă casnică";
 
-    // ─── 7. Return clean result ─────────────────────────────────────────
+    //  7. Return clean result 
     return jsonResponse({ category, title, urgency });
 
   } catch (err) {

@@ -29,7 +29,7 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Stripe not configured." }, 500);
     }
 
-    // ─── 1. Verificam JWT ────────────────────────────────────
+    //  1. Verificam JWT 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return jsonResponse({ error: "Missing Authorization header." }, 401);
@@ -45,7 +45,7 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Invalid or expired token." }, 401);
     }
 
-    // ─── 2. Citim chat_offer_id din body ─────────────────────
+    //  2. Citim chat_offer_id din body 
     let body;
     try {
       body = await req.json();
@@ -58,7 +58,7 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "chat_offer_id is required." }, 400);
     }
 
-    // ─── 3. Iau oferta si conversatia ────────────────────────
+    //  3. Iau oferta si conversatia 
     const { data: chatOffer } = await supabase
       .from("chat_offers")
       .select("id, amount, status, conversation_id")
@@ -88,7 +88,7 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Only the homeowner can pay." }, 403);
     }
 
-    // ─── 4. Verificam ca jobul e inca open ───────────────────
+    //  4. Verificam ca jobul e inca open 
     const { data: job } = await supabase
       .from("jobs")
       .select("id, status, title")
@@ -99,7 +99,7 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "This job is no longer open." }, 400);
     }
 
-    // ─── 5. Verificam ca helper-ul are cont Stripe ──────────
+    //  5. Verificam ca helper-ul are cont Stripe 
     const { data: helperProfile } = await supabase
       .from("profiles")
       .select("stripe_account_id, full_name")
@@ -112,7 +112,7 @@ Deno.serve(async (req: Request) => {
       }, 400);
     }
 
-    // ─── 6. Cream Stripe Checkout Session ────────────────────
+    //  6. Cream Stripe Checkout Session 
     // pretul e in RON, Stripe lucreaza in bani (1 RON = 100 bani)
     const amountInBani = Math.round(chatOffer.amount * 100);
 
@@ -147,7 +147,7 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Failed to create payment session." }, 500);
     }
 
-    // ─── 7. Cream inregistrare in payments (status: pending) ─
+    //  7. Cream inregistrare in payments (status: pending) 
     await supabase.from("payments").insert({
       job_id: job.id,
       payer_id: user.id,
@@ -158,7 +158,7 @@ Deno.serve(async (req: Request) => {
       status: "pending",
     });
 
-    // ─── 8. Returnam URL-ul de checkout ──────────────────────
+    //  8. Returnam URL-ul de checkout 
     return jsonResponse({ url: session.url });
 
   } catch (err) {

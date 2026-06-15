@@ -25,6 +25,8 @@ const TABS: { label: string; value: JobStatus | 'all' }[] = [
     { label: 'In Progress', value: 'assigned' },
     { label: 'Awaiting Approval', value: 'pending_completion' },
     { label: 'Completed', value: 'completed' },
+    { label: 'Disputed', value: 'disputed' },
+    { label: 'Escalated', value: 'escalated' },
     { label: 'Cancelled', value: 'cancelled' },
 ]
 

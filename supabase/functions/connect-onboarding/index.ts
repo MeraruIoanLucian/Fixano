@@ -29,7 +29,7 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Stripe not configured." }, 500);
     }
 
-    // ─── 1. Verificam JWT ────────────────────────────────────
+    //  1. Verificam JWT 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return jsonResponse({ error: "Missing Authorization header." }, 401);
@@ -45,7 +45,7 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Invalid or expired token." }, 401);
     }
 
-    // ─── 2. Verificam ca e helper ────────────────────────────
+    //  2. Verificam ca e helper 
     const { data: profile } = await supabase
       .from("profiles")
       .select("role, stripe_account_id")
@@ -56,7 +56,7 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Only technicians can connect a payout account." }, 403);
     }
 
-    // ─── 3. Citim return_url din body ────────────────────────
+    //  3. Citim return_url din body 
     let body;
     try {
       body = await req.json();
@@ -65,7 +65,7 @@ Deno.serve(async (req: Request) => {
     }
     const returnUrl = body?.return_url || "https://fixano.ro/profile";
 
-    // ─── 4. Cream sau refolosim contul Stripe Express ────────
+    //  4. Cream sau refolosim contul Stripe Express 
     let stripeAccountId = profile.stripe_account_id;
 
     if (!stripeAccountId) {
@@ -95,7 +95,7 @@ Deno.serve(async (req: Request) => {
         .eq("id", user.id);
     }
 
-    // ─── 5. Cream link de onboarding (Account Link) ─────────
+    //  5. Cream link de onboarding (Account Link) 
     const linkRes = await fetch("https://api.stripe.com/v1/account_links", {
       method: "POST",
       headers: {
@@ -115,7 +115,7 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Failed to create onboarding link." }, 500);
     }
 
-    // ─── 6. Returnam URL-ul de onboarding ───────────────────
+    //  6. Returnam URL-ul de onboarding 
     return jsonResponse({ url: link.url });
 
   } catch (err) {
