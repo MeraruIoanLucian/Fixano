@@ -260,26 +260,38 @@ export default function ChatRoom() {
         setOfferLoading(false)
     }
 
-    // accept oferta din chat — acum trece prin Stripe Checkout
+    // accept oferta din chat
     async function handleAcceptOffer(offerId: string) {
         setOfferLoading(true)
         try {
-            const { data, error } = await supabase.functions.invoke('create-checkout', {
-                body: {
-                    chat_offer_id: offerId,
-                    frontend_url: window.location.origin
+            const isHomeowner = user?.id === conversation?.helped_id
+
+            if (isHomeowner) {
+                // Homeowner-ul plateste (fie pt oferta helperului, fie pt a lui dupa ce helperul a acceptat-o)
+                const { data, error } = await supabase.functions.invoke('create-checkout', {
+                    body: {
+                        chat_offer_id: offerId,
+                        frontend_url: window.location.origin
+                    }
+                })
+                if (error) throw error
+                if (data?.error) {
+                    alert(data.error)
+                    setOfferLoading(false)
+                    return
                 }
-            })
-            if (error) throw error
-            if (data?.error) {
-                // eroare de la Edge Function (ex: helper n-are cont Stripe)
-                alert(data.error)
+                if (data?.url) {
+                    window.location.href = data.url
+                }
+            } else {
+                // Helperul accepta oferta homeownerului -> nu poate plati, asa ca trimitem doar un semnal
+                await supabase.from('messages').insert({
+                    conversation_id: conversationId,
+                    sender_id: user?.id,
+                    body: `offer_accepted_by_helper:${offerId}`,
+                    type: 'text'
+                })
                 setOfferLoading(false)
-                return
-            }
-            // redirect la Stripe Checkout
-            if (data?.url) {
-                window.location.href = data.url
             }
         } catch (err: any) {
             console.error('Checkout error:', err)
@@ -362,18 +374,32 @@ export default function ChatRoom() {
                     {messages.map(msg => {
                         const isMine = msg.sender_id === user?.id
 
+                        // ascundem mesajele interne de acceptare
+                        if (msg.type === 'text' && msg.body.startsWith('offer_accepted_by_helper:')) {
+                            return null;
+                        }
+
                         // daca e mesaj de tip offer, afisez bubble-ul special
                         if (msg.type === 'offer') {
                             const offer = chatOffers[msg.body]
                             if (!offer) return null
+                            
+                            const isHomeowner = user?.id === conversation?.helped_id
+                            const isHelper = user?.id === conversation?.helper_id
+                            const acceptedByHelper = messages.some(m => m.sender_id === conversation?.helper_id && m.body === `offer_accepted_by_helper:${offer.id}`)
+
                             return (
                                 <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                                     <div>
                                         <ChatOfferBubble
                                             offer={offer}
                                             isMine={isMine}
+                                            isHomeowner={isHomeowner}
+                                            isHelper={isHelper}
+                                            acceptedByHelper={acceptedByHelper}
                                             onAccept={handleAcceptOffer}
                                             onDecline={handleDeclineOffer}
+                                            onPay={handleAcceptOffer}
                                             loading={offerLoading}
                                         />
                                         <span className={`text-[10px] mt-1 block ${isMine ? 'text-right' : 'text-left'}`} style={{ color: '#A89882' }}>
